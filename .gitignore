@@ -85,3 +85,8 @@ product_extraction.py
 plot.py
 
 .claude/
+
+
+# personal
+recoverable_runtime_MVP_docs
+experiments
