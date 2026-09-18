@@ -1,5 +1,11 @@
 """Recoverable Runtime semantic Contract core."""
 
+from browser_use.recovery.bootstrap import (
+	RecoveredRuntime,
+	RecoveryBootstrap,
+	RecoveryBootstrapError,
+	normalize_after_restart,
+)
 from browser_use.recovery.browser_use_adapter import (
 	BrowserUseAdapterError,
 	BrowserUseCompatibilityError,
@@ -46,6 +52,21 @@ from browser_use.recovery.manager import (
 	IdentityConflictError,
 	StaleDeltaError,
 )
+from browser_use.recovery.persistence import (
+	CheckpointError,
+	CheckpointManager,
+	EffectLedger,
+	EffectRecord,
+	EffectRecordDraft,
+	EffectRecordStatus,
+	RuntimeCheckpoint,
+	RuntimeStorage,
+	SQLiteRuntimeStorage,
+	StorageConflictError,
+	StorageError,
+	StorageNotFoundError,
+	WorkflowRun,
+)
 from browser_use.recovery.runtime_state import RuntimeStateManager, RuntimeStateTransitionError
 from browser_use.recovery.scheduler import RuntimeScheduler, SchedulingError
 from browser_use.recovery.semantic_context import (
@@ -53,6 +74,11 @@ from browser_use.recovery.semantic_context import (
 	SemanticContextError,
 	SemanticRuntimeContext,
 	SemanticUnitContext,
+)
+from browser_use.recovery.side_effects import (
+	SideEffectCoordinator,
+	SideEffectExecutionError,
+	SideEffectExecutionResult,
 )
 from browser_use.recovery.verification import (
 	VerificationError,
@@ -71,6 +97,8 @@ __all__ = [
 	'BrowserUseMessageContextSink',
 	'BrowserUseRuntimeAdapter',
 	'BrowserUseStepRecord',
+	'CheckpointError',
+	'CheckpointManager',
 	'CompletionClaim',
 	'CompletionClaimError',
 	'CompletionClaimSource',
@@ -82,12 +110,21 @@ __all__ = [
 	'ContractValidationError',
 	'DeltaOperation',
 	'EffectSpec',
+	'EffectLedger',
+	'EffectRecord',
+	'EffectRecordDraft',
+	'EffectRecordStatus',
 	'EffectStatus',
 	'FrozenModel',
 	'Idempotency',
 	'IdentityConflictError',
 	'ProposedUnit',
 	'Reversibility',
+	'RecoveredRuntime',
+	'RecoveryBootstrap',
+	'RecoveryBootstrapError',
+	'RuntimeCheckpoint',
+	'RuntimeStorage',
 	'RuntimeScheduler',
 	'RuntimeProgressBlockedError',
 	'RuntimeStateManager',
@@ -100,7 +137,14 @@ __all__ = [
 	'SemanticRuntimeContext',
 	'SemanticUnit',
 	'SemanticUnitContext',
+	'SideEffectCoordinator',
+	'SideEffectExecutionError',
+	'SideEffectExecutionResult',
+	'SQLiteRuntimeStorage',
 	'StaleDeltaError',
+	'StorageConflictError',
+	'StorageError',
+	'StorageNotFoundError',
 	'SupersedeUnitOp',
 	'TargetSpec',
 	'UnitIdentity',
@@ -119,5 +163,7 @@ __all__ = [
 	'VerificationSpec',
 	'VerificationStatus',
 	'Verifier',
+	'WorkflowRun',
 	'expected_target_evidence',
+	'normalize_after_restart',
 ]
