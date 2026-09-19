@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from pydantic import field_serializer, field_validator
 
-from browser_use.recovery.contracts import FrozenModel, SemanticContract, UnitRuntimeState
+from browser_use.recovery.contracts import EffectStatus, FrozenModel, SemanticContract, UnitRuntimeState, UnitStatus
 from browser_use.recovery.persistence.checkpoint import CheckpointManager
 from browser_use.recovery.persistence.models import (
 	EffectRecord,
@@ -93,8 +93,7 @@ class SideEffectCoordinator:
 		unit = self._contract.get_unit(unit_id)
 		if not unit.effect.has_side_effect:
 			raise SideEffectExecutionError(f'unit {unit_id} has no external side effect')
-		if unit_id not in states:
-			raise SideEffectExecutionError(f'missing Runtime state for unit {unit_id}')
+		self._validate_execution(unit_id, states)
 
 		effect_id = self._effect_id_factory()
 		attempt_id = self._attempt_id_factory()
@@ -201,6 +200,20 @@ class SideEffectCoordinator:
 			action_succeeded=action_succeeded,
 			action_error=action_error,
 		)
+
+	@staticmethod
+	def _validate_execution(unit_id: str, states: dict[str, UnitRuntimeState]) -> None:
+		"""Reject unsafe execution before generating attempt identity or durable facts."""
+		try:
+			state = states[unit_id]
+		except KeyError as exc:
+			raise SideEffectExecutionError(f'missing Runtime state for unit {unit_id}') from exc
+		if state.status is not UnitStatus.ACTIVE:
+			raise SideEffectExecutionError(f'effect execution requires ACTIVE status, got {state.status.name} for {unit_id}')
+		if state.effect_status not in {EffectStatus.NOT_STARTED, EffectStatus.NOT_APPLIED}:
+			raise SideEffectExecutionError(
+				f'effect execution requires NOT_STARTED or NOT_APPLIED status, got {state.effect_status.name} for {unit_id}'
+			)
 
 
 def _effect_record_status(outcome: VerificationOutcome) -> EffectRecordStatus:

@@ -123,6 +123,46 @@ class RuntimeStateManager:
 			effect_status=EffectStatus.UNKNOWN,
 		)
 
+	def apply_reconciliation_result(
+		self,
+		contract: SemanticContract,
+		states: dict[str, UnitRuntimeState],
+		unit_id: str,
+		result: VerificationResult,
+	) -> dict[str, UnitRuntimeState]:
+		"""Resolve only a genuinely inconclusive UNKNOWN side effect."""
+		state = self._state_for_transition(contract, states, unit_id)
+		if (
+			state.status is not UnitStatus.UNKNOWN
+			or state.effect_status is not EffectStatus.UNKNOWN
+			or state.verification_status is not VerificationStatus.INCONCLUSIVE
+		):
+			raise RuntimeStateTransitionError(f'reconciliation requires UNKNOWN/UNKNOWN/INCONCLUSIVE status for {unit_id}')
+
+		if result.outcome is VerificationOutcome.VERIFIED:
+			return self._replace_state(
+				states,
+				state,
+				status=UnitStatus.COMPLETED,
+				verification_status=VerificationStatus.VERIFIED,
+				effect_status=EffectStatus.COMMITTED,
+			)
+		if result.outcome is VerificationOutcome.REJECTED:
+			return self._replace_state(
+				states,
+				state,
+				status=UnitStatus.ACTIVE,
+				verification_status=VerificationStatus.REJECTED,
+				effect_status=EffectStatus.NOT_APPLIED,
+			)
+		return self._replace_state(
+			states,
+			state,
+			status=UnitStatus.UNKNOWN,
+			verification_status=VerificationStatus.INCONCLUSIVE,
+			effect_status=EffectStatus.UNKNOWN,
+		)
+
 	def activate(
 		self,
 		contract: SemanticContract,

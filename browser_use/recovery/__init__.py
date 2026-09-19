@@ -67,6 +67,11 @@ from browser_use.recovery.persistence import (
 	StorageNotFoundError,
 	WorkflowRun,
 )
+from browser_use.recovery.reconciliation import (
+	ReconciliationCoordinator,
+	ReconciliationError,
+	ReconciliationResult,
+)
 from browser_use.recovery.runtime_state import RuntimeStateManager, RuntimeStateTransitionError
 from browser_use.recovery.scheduler import RuntimeScheduler, SchedulingError
 from browser_use.recovery.semantic_context import (
@@ -121,6 +126,9 @@ __all__ = [
 	'ProposedUnit',
 	'Reversibility',
 	'RecoveredRuntime',
+	'ReconciliationCoordinator',
+	'ReconciliationError',
+	'ReconciliationResult',
 	'RecoveryBootstrap',
 	'RecoveryBootstrapError',
 	'RuntimeCheckpoint',

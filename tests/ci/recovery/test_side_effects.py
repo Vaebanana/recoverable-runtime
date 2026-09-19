@@ -20,7 +20,7 @@ from browser_use.recovery.contracts import (
 from browser_use.recovery.persistence.checkpoint import CheckpointManager
 from browser_use.recovery.persistence.models import EffectRecordStatus, WorkflowRun
 from browser_use.recovery.persistence.storage import SQLiteRuntimeStorage
-from browser_use.recovery.side_effects import SideEffectCoordinator
+from browser_use.recovery.side_effects import SideEffectCoordinator, SideEffectExecutionError
 from browser_use.recovery.verification import (
 	VerificationEvidence,
 	VerificationOutcome,
@@ -221,3 +221,63 @@ async def test_action_exception_is_persisted_as_unknown_without_retry(tmp_path: 
 		assert result.states['u1'].status is UnitStatus.UNKNOWN
 		assert result.states['u1'].verification_status is VerificationStatus.INCONCLUSIVE
 		assert result.records[-1].status is EffectRecordStatus.UNKNOWN
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+	'unit_status, effect_status, verification_status, expected_error',
+	[
+		(UnitStatus.UNKNOWN, EffectStatus.UNKNOWN, VerificationStatus.INCONCLUSIVE, 'ACTIVE'),
+		(UnitStatus.ACTIVE, EffectStatus.ATTEMPTED, VerificationStatus.NOT_CHECKED, 'NOT_STARTED or NOT_APPLIED'),
+		(UnitStatus.ACTIVE, EffectStatus.COMMITTED, VerificationStatus.VERIFIED, 'NOT_STARTED or NOT_APPLIED'),
+		(UnitStatus.ACTIVE, EffectStatus.UNKNOWN, VerificationStatus.INCONCLUSIVE, 'NOT_STARTED or NOT_APPLIED'),
+	],
+)
+async def test_unsafe_effect_is_rejected_before_ids_persistence_or_executor(
+	tmp_path: Path,
+	unit_status: UnitStatus,
+	effect_status: EffectStatus,
+	verification_status: VerificationStatus,
+	expected_error: str,
+) -> None:
+	contract = side_effect_contract()
+	generated_ids: list[str] = []
+	executor_calls = 0
+	states = {
+		'u1': UnitRuntimeState(
+			unit_id='u1',
+			status=unit_status,
+			verification_status=verification_status,
+			effect_status=effect_status,
+		)
+	}
+	with SQLiteRuntimeStorage(tmp_path / 'runtime.db') as storage:
+		storage.start_run(WorkflowRun(workflow_id='wf-1', run_id='run-1'))
+		storage.save_contract('wf-1', contract)
+		blocked_coordinator = SideEffectCoordinator(
+			storage=storage,
+			checkpoint_manager=CheckpointManager(storage),
+			workflow_id='wf-1',
+			run_id='run-1',
+			contract=contract,
+			verifier=StaticVerifier(contract, VerificationOutcome.VERIFIED),
+			effect_id_factory=lambda: generated_ids.append('effect') or 'effect-1',
+			attempt_id_factory=lambda: generated_ids.append('attempt') or 'attempt-1',
+		)
+
+		async def executor() -> None:
+			nonlocal executor_calls
+			executor_calls += 1
+
+		with pytest.raises(SideEffectExecutionError, match=expected_error):
+			await blocked_coordinator.execute(
+				unit_id='u1',
+				effect_key='submit-order',
+				states=states,
+				last_effect_seq=0,
+				executor=executor,
+			)
+
+		assert generated_ids == []
+		assert executor_calls == 0
+		assert storage.read_effects('wf-1') == ()

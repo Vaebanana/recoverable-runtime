@@ -114,20 +114,29 @@ class VerificationManager(Generic[VerificationManagerContextT]):
 		context: VerificationManagerContextT,
 	) -> tuple[dict[str, UnitRuntimeState], VerificationResult]:
 		"""Verify one candidate and atomically return its next state snapshot."""
-		if verifier.observational is not True:
-			raise VerificationError('verifier must declare observational=True')
-
 		unit = contract.get_unit(unit_id)
 		verifying_states = self._state_manager.begin_verification(contract, states, unit_id)
+		result = await self.observe(unit, verifier, context)
+
+		updated = self._state_manager.apply_verification_result(contract, verifying_states, unit_id, result)
+		return updated, result
+
+	async def observe(
+		self,
+		unit: SemanticUnit,
+		verifier: Verifier[VerificationManagerContextT],
+		context: VerificationManagerContextT,
+	) -> VerificationResult:
+		"""Observe a unit's postcondition without changing Runtime state."""
+		if verifier.observational is not True:
+			raise VerificationError('verifier must declare observational=True')
 		try:
 			result = await verifier.verify(unit, context)
 		except Exception as exc:
 			result = self._inconclusive_from_error(unit, exc)
 		else:
 			result = self._validate_evidence_identity(unit, result)
-
-		updated = self._state_manager.apply_verification_result(contract, verifying_states, unit_id, result)
-		return updated, result
+		return result
 
 	@staticmethod
 	def _validate_evidence_identity(unit: SemanticUnit, result: VerificationResult) -> VerificationResult:
