@@ -6,6 +6,7 @@ from browser_use.recovery.bootstrap import (
 	RecoveryBootstrapError,
 	normalize_after_restart,
 )
+from browser_use.recovery.browser_action_bridge import BrowserActionBridge, BrowserActionBridgeError
 from browser_use.recovery.browser_use_adapter import (
 	BrowserUseAdapterError,
 	BrowserUseCompatibilityError,
@@ -84,6 +85,7 @@ from browser_use.recovery.side_effects import (
 	SideEffectCoordinator,
 	SideEffectExecutionError,
 	SideEffectExecutionResult,
+	SimulatedCrash,
 )
 from browser_use.recovery.verification import (
 	VerificationError,
@@ -97,6 +99,8 @@ from browser_use.recovery.verification import (
 
 __all__ = [
 	'AddUnitOp',
+	'BrowserActionBridge',
+	'BrowserActionBridgeError',
 	'BrowserUseAdapterError',
 	'BrowserUseCompatibilityError',
 	'BrowserUseMessageContextSink',
@@ -148,6 +152,7 @@ __all__ = [
 	'SideEffectCoordinator',
 	'SideEffectExecutionError',
 	'SideEffectExecutionResult',
+	'SimulatedCrash',
 	'SQLiteRuntimeStorage',
 	'StaleDeltaError',
 	'StorageConflictError',

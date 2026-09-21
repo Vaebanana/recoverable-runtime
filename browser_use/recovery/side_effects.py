@@ -31,6 +31,17 @@ class SideEffectExecutionError(ValueError):
 	"""Raised when a unit cannot enter the durable side-effect boundary."""
 
 
+class SimulatedCrash(BaseException):
+	"""Fault-injection signal for ``after_attempt_hook``.
+
+	Inherits ``BaseException`` (like ``KeyboardInterrupt``) so ordinary
+	``except Exception`` error handling cannot swallow it. Raising it inside
+	``after_attempt_hook`` models the process dying in the window between the
+	durable ATTEMPTED ledger fact and verification, leaving the ledger without
+	a closing COMMITTED / NOT_APPLIED / UNKNOWN record.
+	"""
+
+
 class SideEffectExecutionResult(FrozenModel):
 	"""Structured durable outcome of one external action attempt."""
 
@@ -88,8 +99,15 @@ class SideEffectCoordinator:
 		last_effect_seq: int,
 		executor: Callable[[], Awaitable[object]],
 		idempotency_key: str | None = None,
+		after_attempt_hook: Callable[[], None] | None = None,
 	) -> SideEffectExecutionResult:
-		"""Execute exactly once and persist verification as the authoritative outcome."""
+		"""Execute exactly once and persist verification as the authoritative outcome.
+
+		``after_attempt_hook`` is a fault-injection seam invoked strictly after
+		the executor returned and the ATTEMPTED ledger fact was persisted, but
+		before verification. An exception it raises (typically ``SimulatedCrash``)
+		propagates unchanged, leaving the ledger open at ATTEMPTED.
+		"""
 		unit = self._contract.get_unit(unit_id)
 		if not unit.effect.has_side_effect:
 			raise SideEffectExecutionError(f'unit {unit_id} has no external side effect')
@@ -164,6 +182,8 @@ class SideEffectCoordinator:
 					}
 				)
 			)
+			if after_attempt_hook is not None:
+				after_attempt_hook()
 			candidate_states = self._state_manager.claim_completion(self._contract, states, unit_id)
 			updated_states, verification_result = await self._verification_manager.verify_candidate(
 				self._contract,

@@ -89,4 +89,7 @@ plot.py
 
 # personal
 recoverable_runtime_MVP_docs
-experiments
+experiments/*
+# the recovery smoke experiment is covered by tests/ci/recovery and must be committable
+!experiments/__init__.py
+!experiments/recovery_smoke/

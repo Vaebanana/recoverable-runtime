@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Protocol
 
 from browser_use.llm.messages import UserMessage
@@ -141,6 +142,18 @@ class BrowserUseRuntimeAdapter:
 				f'normal progress is blocked by UNKNOWN units: {", ".join(context.blocked_unit_ids)}'
 			)
 		self._states = self._state_manager.activate(self._contract, self._states, unit_id)
+
+	def apply_runtime_states(self, states: Mapping[str, UnitRuntimeState]) -> None:
+		"""Replace the Runtime snapshot after validating it through the context builder.
+
+		Used by the action-level side-effect bridge to write the authoritative
+		post-execution snapshot returned by ``SideEffectCoordinator.execute`` back
+		into the adapter, keeping SQLite, the adapter, and the bridge's
+		``last_effect_seq`` consistent after one action.
+		"""
+		next_states = dict(states)
+		self._context_builder.build(self._contract, next_states)
+		self._states = next_states
 
 	async def on_step_start(self, agent: Agent) -> None:
 		"""Validate progress, choose only an unambiguous unit, and publish context."""

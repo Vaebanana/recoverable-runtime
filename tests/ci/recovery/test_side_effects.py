@@ -20,7 +20,7 @@ from browser_use.recovery.contracts import (
 from browser_use.recovery.persistence.checkpoint import CheckpointManager
 from browser_use.recovery.persistence.models import EffectRecordStatus, WorkflowRun
 from browser_use.recovery.persistence.storage import SQLiteRuntimeStorage
-from browser_use.recovery.side_effects import SideEffectCoordinator, SideEffectExecutionError
+from browser_use.recovery.side_effects import SideEffectCoordinator, SideEffectExecutionError, SimulatedCrash
 from browser_use.recovery.verification import (
 	VerificationEvidence,
 	VerificationOutcome,
@@ -281,3 +281,48 @@ async def test_unsafe_effect_is_rejected_before_ids_persistence_or_executor(
 		assert generated_ids == []
 		assert executor_calls == 0
 		assert storage.read_effects('wf-1') == ()
+
+
+@pytest.mark.asyncio
+async def test_after_attempt_hook_crash_leaves_ledger_open_at_attempted(tmp_path: Path) -> None:
+	contract = side_effect_contract()
+	hook_calls = 0
+	with SQLiteRuntimeStorage(tmp_path / 'runtime.db') as storage:
+		storage.start_run(WorkflowRun(workflow_id='wf-1', run_id='run-1'))
+		storage.save_contract('wf-1', contract)
+
+		coordinator_for_crash = coordinator(
+			storage,
+			contract,
+			StaticVerifier(contract, VerificationOutcome.VERIFIED),
+		)
+
+		def crash_here() -> None:
+			nonlocal hook_calls
+			hook_calls += 1
+			raise SimulatedCrash('simulated crash after ATTEMPTED')
+
+		async def execute_action() -> dict[str, str]:
+			return {'action': 'clicked'}
+
+		with pytest.raises(SimulatedCrash):
+			await coordinator_for_crash.execute(
+				unit_id='u1',
+				effect_key='submit-order',
+				states=active_states(),
+				last_effect_seq=0,
+				executor=execute_action,
+				after_attempt_hook=crash_here,
+			)
+
+		assert hook_calls == 1
+		records = storage.read_effects('wf-1')
+		assert [record.status for record in records] == [
+			EffectRecordStatus.PREPARED,
+			EffectRecordStatus.ATTEMPTED,
+		]
+		# No closing record and no post-ATTEMPTED checkpoint: the process "died".
+		checkpoint = storage.load_latest_checkpoint('wf-1')
+		assert checkpoint is not None
+		assert checkpoint.last_effect_seq == records[0].seq
+		assert checkpoint.metadata.get('effect_phase') == EffectRecordStatus.PREPARED.value
