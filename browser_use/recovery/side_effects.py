@@ -32,13 +32,12 @@ class SideEffectExecutionError(ValueError):
 
 
 class SimulatedCrash(BaseException):
-	"""Fault-injection signal for ``after_attempt_hook``.
+	"""Fault-injection signal for durable crash-window tests.
 
 	Inherits ``BaseException`` (like ``KeyboardInterrupt``) so ordinary
-	``except Exception`` error handling cannot swallow it. Raising it inside
-	``after_attempt_hook`` models the process dying in the window between the
-	durable ATTEMPTED ledger fact and verification, leaving the ledger without
-	a closing COMMITTED / NOT_APPLIED / UNKNOWN record.
+	``except Exception`` error handling cannot swallow it. Raising it from
+	``after_prepared_hook`` or ``after_attempt_hook`` models the process dying
+	without running normal Runtime cleanup or writing a closing effect record.
 	"""
 
 
@@ -99,14 +98,20 @@ class SideEffectCoordinator:
 		last_effect_seq: int,
 		executor: Callable[[], Awaitable[object]],
 		idempotency_key: str | None = None,
+		after_prepared_hook: Callable[[], None] | None = None,
 		after_attempt_hook: Callable[[], None] | None = None,
 	) -> SideEffectExecutionResult:
 		"""Execute exactly once and persist verification as the authoritative outcome.
 
-		``after_attempt_hook`` is a fault-injection seam invoked strictly after
-		the executor returned and the ATTEMPTED ledger fact was persisted, but
-		before verification. An exception it raises (typically ``SimulatedCrash``)
-		propagates unchanged, leaving the ledger open at ATTEMPTED.
+		``after_prepared_hook`` is invoked strictly after PREPARED and its checkpoint
+		are durably committed, but before the external executor runs.
+
+		``after_attempt_hook`` is invoked strictly after the executor returned and
+		the ATTEMPTED ledger fact was persisted, but before verification.
+
+		Fault-injection hooks normally raise ``SimulatedCrash`` so the exception
+		propagates unchanged and the ledger remains open at the selected crash
+		window.
 		"""
 		unit = self._contract.get_unit(unit_id)
 		if not unit.effect.has_side_effect:
@@ -137,6 +142,8 @@ class SideEffectCoordinator:
 			EffectRecordDraft.model_validate({**common_fields, 'status': EffectRecordStatus.PREPARED}),
 			prepared_checkpoint,
 		)
+		if after_prepared_hook is not None:
+			after_prepared_hook()
 
 		action_succeeded = False
 		action_error: str | None = None

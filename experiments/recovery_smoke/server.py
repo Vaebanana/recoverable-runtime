@@ -1,15 +1,15 @@
-"""Local controllable job-application page for the recovery smoke experiment.
+"""Local controllable job-application page for recovery experiments.
 
 The application status lives in a SQLite file next to this module, not in the
 agent process and not only in page JavaScript. When the agent process crashes
 after clicking Submit, the external world still remembers that the submission
-actually happened, which makes the later crash/reconciliation experiment
-meaningful.
+actually happened, which makes crash/reconciliation experiments meaningful.
 
 Endpoints:
     GET  /         - page showing Application #7 status and the submit button
     POST /submit   - flip the status to SUBMITTED and increment submit_count
     GET  /status   - JSON snapshot of the durable application state
+    POST /reset    - reset state for an independent experiment trial
 
 Run from the repository root:
 
@@ -73,7 +73,7 @@ def _load() -> tuple[str, int]:
 
 
 def _submit() -> tuple[str, int]:
-	"""Mark the application SUBMITTED and increment the submit counter exactly once."""
+	"""Mark the application SUBMITTED and increment the submit counter."""
 	with closing(_connect()) as connection:
 		connection.execute(
 			'UPDATE application_state SET status = ?, submit_count = submit_count + 1 WHERE application_id = ?',
@@ -87,6 +87,31 @@ def _submit() -> tuple[str, int]:
 	if row is None:
 		raise RuntimeError(f'no application state for {APPLICATION_ID}')
 	return row[0], row[1]
+
+
+def _reset() -> tuple[str, int]:
+	"""Reset the durable world state so experiment trials are independent."""
+	with closing(_connect()) as connection:
+		connection.execute(
+			'UPDATE application_state SET status = ?, submit_count = 0 WHERE application_id = ?',
+			(NOT_SUBMITTED, APPLICATION_ID),
+		)
+		connection.commit()
+		row = connection.execute(
+			'SELECT status, submit_count FROM application_state WHERE application_id = ?',
+			(APPLICATION_ID,),
+		).fetchone()
+	if row is None:
+		raise RuntimeError(f'no application state for {APPLICATION_ID}')
+	return row[0], row[1]
+
+
+def _snapshot(status: str, submit_count: int) -> dict[str, object]:
+	return {
+		'application_id': APPLICATION_ID,
+		'status': status,
+		'submit_count': submit_count,
+	}
 
 
 def _render(status: str, submit_count: int) -> str:
@@ -126,13 +151,14 @@ def submit() -> HTMLResponse:
 def status() -> JSONResponse:
 	"""Return the durable application state as JSON."""
 	status_value, submit_count = _load()
-	return JSONResponse(
-		{
-			'application_id': APPLICATION_ID,
-			'status': status_value,
-			'submit_count': submit_count,
-		}
-	)
+	return JSONResponse(_snapshot(status_value, submit_count))
+
+
+@app.post('/reset')
+def reset() -> JSONResponse:
+	"""Reset the external world before a new baseline/harness trial."""
+	status_value, submit_count = _reset()
+	return JSONResponse(_snapshot(status_value, submit_count))
 
 
 def main() -> None:

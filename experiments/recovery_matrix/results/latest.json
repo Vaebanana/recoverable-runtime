@@ -1,0 +1,545 @@
+{
+  "results": [
+    {
+      "mode": "baseline",
+      "scenario": "after_prepared",
+      "trial": 1,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 1,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "crash occurred before the first external submit"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "after_prepared",
+      "trial": 1,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 1,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "rejected"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "after_attempted",
+      "trial": 1,
+      "final_status": "SUBMITTED",
+      "submit_count": 2,
+      "retry_count": 1,
+      "unsafe_retry_count": 1,
+      "duplicate_effect": true,
+      "task_completed": true,
+      "safe_recovery": false,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "first submit reached external world before crash"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "after_attempted",
+      "trial": 1,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 0,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "verified"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "verifier_unavailable",
+      "trial": 1,
+      "final_status": "SUBMITTED",
+      "submit_count": 2,
+      "retry_count": 1,
+      "unsafe_retry_count": 1,
+      "duplicate_effect": true,
+      "task_completed": true,
+      "safe_recovery": false,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "first submit reached external world before crash",
+        "completion evidence is unavailable after restart"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "verifier_unavailable",
+      "trial": 1,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 0,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "inconclusive",
+        "verified"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution",
+        "verifier outage stayed UNKNOWN and remained blocked"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "after_prepared",
+      "trial": 2,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 1,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "crash occurred before the first external submit"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "after_prepared",
+      "trial": 2,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 1,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "rejected"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "after_attempted",
+      "trial": 2,
+      "final_status": "SUBMITTED",
+      "submit_count": 2,
+      "retry_count": 1,
+      "unsafe_retry_count": 1,
+      "duplicate_effect": true,
+      "task_completed": true,
+      "safe_recovery": false,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "first submit reached external world before crash"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "after_attempted",
+      "trial": 2,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 0,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "verified"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "verifier_unavailable",
+      "trial": 2,
+      "final_status": "SUBMITTED",
+      "submit_count": 2,
+      "retry_count": 1,
+      "unsafe_retry_count": 1,
+      "duplicate_effect": true,
+      "task_completed": true,
+      "safe_recovery": false,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "first submit reached external world before crash",
+        "completion evidence is unavailable after restart"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "verifier_unavailable",
+      "trial": 2,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 0,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "inconclusive",
+        "verified"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution",
+        "verifier outage stayed UNKNOWN and remained blocked"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "after_prepared",
+      "trial": 3,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 1,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "crash occurred before the first external submit"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "after_prepared",
+      "trial": 3,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 1,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "rejected"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "after_attempted",
+      "trial": 3,
+      "final_status": "SUBMITTED",
+      "submit_count": 2,
+      "retry_count": 1,
+      "unsafe_retry_count": 1,
+      "duplicate_effect": true,
+      "task_completed": true,
+      "safe_recovery": false,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "first submit reached external world before crash"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "after_attempted",
+      "trial": 3,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 0,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "verified"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "verifier_unavailable",
+      "trial": 3,
+      "final_status": "SUBMITTED",
+      "submit_count": 2,
+      "retry_count": 1,
+      "unsafe_retry_count": 1,
+      "duplicate_effect": true,
+      "task_completed": true,
+      "safe_recovery": false,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "first submit reached external world before crash",
+        "completion evidence is unavailable after restart"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "verifier_unavailable",
+      "trial": 3,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 0,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "inconclusive",
+        "verified"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution",
+        "verifier outage stayed UNKNOWN and remained blocked"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "after_prepared",
+      "trial": 4,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 1,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "crash occurred before the first external submit"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "after_prepared",
+      "trial": 4,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 1,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "rejected"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "after_attempted",
+      "trial": 4,
+      "final_status": "SUBMITTED",
+      "submit_count": 2,
+      "retry_count": 1,
+      "unsafe_retry_count": 1,
+      "duplicate_effect": true,
+      "task_completed": true,
+      "safe_recovery": false,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "first submit reached external world before crash"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "after_attempted",
+      "trial": 4,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 0,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "verified"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "verifier_unavailable",
+      "trial": 4,
+      "final_status": "SUBMITTED",
+      "submit_count": 2,
+      "retry_count": 1,
+      "unsafe_retry_count": 1,
+      "duplicate_effect": true,
+      "task_completed": true,
+      "safe_recovery": false,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "first submit reached external world before crash",
+        "completion evidence is unavailable after restart"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "verifier_unavailable",
+      "trial": 4,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 0,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "inconclusive",
+        "verified"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution",
+        "verifier outage stayed UNKNOWN and remained blocked"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "after_prepared",
+      "trial": 5,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 1,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "crash occurred before the first external submit"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "after_prepared",
+      "trial": 5,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 1,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "rejected"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "after_attempted",
+      "trial": 5,
+      "final_status": "SUBMITTED",
+      "submit_count": 2,
+      "retry_count": 1,
+      "unsafe_retry_count": 1,
+      "duplicate_effect": true,
+      "task_completed": true,
+      "safe_recovery": false,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "first submit reached external world before crash"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "after_attempted",
+      "trial": 5,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 0,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "verified"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution"
+      ]
+    },
+    {
+      "mode": "baseline",
+      "scenario": "verifier_unavailable",
+      "trial": 5,
+      "final_status": "SUBMITTED",
+      "submit_count": 2,
+      "retry_count": 1,
+      "unsafe_retry_count": 1,
+      "duplicate_effect": true,
+      "task_completed": true,
+      "safe_recovery": false,
+      "reconciliation_outcomes": [],
+      "notes": [
+        "first submit reached external world before crash",
+        "completion evidence is unavailable after restart"
+      ]
+    },
+    {
+      "mode": "harness",
+      "scenario": "verifier_unavailable",
+      "trial": 5,
+      "final_status": "SUBMITTED",
+      "submit_count": 1,
+      "retry_count": 0,
+      "unsafe_retry_count": 0,
+      "duplicate_effect": false,
+      "task_completed": true,
+      "safe_recovery": true,
+      "reconciliation_outcomes": [
+        "inconclusive",
+        "verified"
+      ],
+      "notes": [
+        "UNKNOWN safety gate blocked direct re-execution",
+        "verifier outage stayed UNKNOWN and remained blocked"
+      ]
+    }
+  ],
+  "summary": {
+    "baseline": {
+      "trials": 15,
+      "task_completion_rate": 1.0,
+      "safe_recovery_rate": 0.3333333333333333,
+      "duplicate_effect_rate": 0.6666666666666666,
+      "unsafe_retry_rate": 0.6666666666666666
+    },
+    "harness": {
+      "trials": 15,
+      "task_completion_rate": 1.0,
+      "safe_recovery_rate": 1.0,
+      "duplicate_effect_rate": 0.0,
+      "unsafe_retry_rate": 0.0
+    }
+  }
+}

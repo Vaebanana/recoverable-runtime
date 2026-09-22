@@ -60,6 +60,7 @@ class BrowserActionBridge:
 		effect_key: str = 'submit_application',
 		button_prompt: str = 'Submit application button',
 		element_finder: ElementFinder | None = None,
+		after_prepared_hook: Callable[[], None] | None = None,
 		after_attempt_hook: Callable[[], None] | None = None,
 		action_description: str = (
 			'Submit the current application. Use only when the semantic runtime current unit requires submitting it.'
@@ -74,6 +75,7 @@ class BrowserActionBridge:
 		self._effect_key = effect_key
 		self._button_prompt = button_prompt
 		self._element_finder = element_finder or self._find_submit_button
+		self._after_prepared_hook = after_prepared_hook
 		self._after_attempt_hook = after_attempt_hook
 		self._action_description = action_description
 		self._registered = False
@@ -117,6 +119,7 @@ class BrowserActionBridge:
 				states=bridge._runtime_adapter.states,
 				last_effect_seq=bridge._last_effect_seq,
 				executor=executor,
+				after_prepared_hook=bridge._after_prepared_hook,
 				after_attempt_hook=bridge._after_attempt_hook,
 			)
 			bridge._runtime_adapter.apply_runtime_states(result.states)
