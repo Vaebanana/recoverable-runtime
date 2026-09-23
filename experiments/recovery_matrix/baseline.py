@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from browser_use.browser.session import BrowserSession
-
 from experiments.recovery_matrix.models import ExecutionMode, FaultScenario, TrialResult
 from experiments.recovery_matrix.world import fetch_world_state, reset_world, submit_once
 

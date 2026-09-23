@@ -2,6 +2,7 @@ import asyncio
 import os
 
 from dotenv import load_dotenv
+
 from browser_use import Agent, BrowserSession
 from browser_use.llm import ChatDeepSeek
 

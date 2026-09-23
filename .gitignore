@@ -94,3 +94,6 @@ experiments/*
 !experiments/__init__.py
 !experiments/recovery_smoke/
 !experiments/recovery_matrix/
+!experiments/process_recovery/
+!experiments/process_recovery/results/day10_results.json
+!experiments/process_recovery/results/day10_summary.md

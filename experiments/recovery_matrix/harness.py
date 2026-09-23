@@ -11,9 +11,9 @@ from browser_use.recovery import (
 	BrowserUseRuntimeAdapter,
 	ReconciliationCoordinator,
 	RecoveryBootstrap,
-	SideEffectCoordinator,
 	SemanticContract,
 	SemanticUnit,
+	SideEffectCoordinator,
 	SideEffectExecutionError,
 	SimulatedCrash,
 	UnitRuntimeState,
@@ -24,7 +24,7 @@ from browser_use.recovery.verification import VerificationResult, Verifier
 from browser_use.tools.service import Tools
 from experiments.recovery_matrix.models import ExecutionMode, FaultScenario, TrialResult
 from experiments.recovery_matrix.world import fetch_world_state, reset_world, submit_once, wait_for_submit_count
-from experiments.recovery_smoke.run_agent import NoopClaimSource, UNIT_ID, build_contract, find_submit_button_by_selector
+from experiments.recovery_smoke.run_agent import UNIT_ID, NoopClaimSource, build_contract, find_submit_button_by_selector
 from experiments.recovery_smoke.verifier import ApplicationStatusVerifier, build_page_status_reader
 
 

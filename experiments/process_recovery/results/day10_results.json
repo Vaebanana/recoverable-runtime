@@ -1,0 +1,61 @@
+{
+  "experiment": "day10_process_recovery",
+  "generated_at": "2026-09-22T15:44:26.862848Z",
+  "results": [
+    {
+      "scenario": "after_prepared",
+      "crash_point": "after_prepared",
+      "ledger_after_crash": [
+        "prepared"
+      ],
+      "ledger_last_effect_seq_after_crash": 1,
+      "checkpoint_last_effect_seq_after_crash": 1,
+      "final_unit_status": "completed",
+      "final_effect_status": "committed",
+      "verification_status": "verified",
+      "submit_count": 1,
+      "passed": true,
+      "ledger_after_first_recovery": null,
+      "status_after_first_recovery": null
+    },
+    {
+      "scenario": "after_attempted",
+      "crash_point": "after_attempted",
+      "ledger_after_crash": [
+        "prepared",
+        "attempted"
+      ],
+      "ledger_last_effect_seq_after_crash": 2,
+      "checkpoint_last_effect_seq_after_crash": 1,
+      "final_unit_status": "completed",
+      "final_effect_status": "committed",
+      "verification_status": "verified",
+      "submit_count": 1,
+      "passed": true,
+      "ledger_after_first_recovery": null,
+      "status_after_first_recovery": null
+    },
+    {
+      "scenario": "verifier_unavailable",
+      "crash_point": "after_attempted",
+      "ledger_after_crash": [
+        "prepared",
+        "attempted"
+      ],
+      "ledger_last_effect_seq_after_crash": 2,
+      "checkpoint_last_effect_seq_after_crash": 1,
+      "final_unit_status": "completed",
+      "final_effect_status": "committed",
+      "verification_status": "verified",
+      "submit_count": 1,
+      "passed": true,
+      "ledger_after_first_recovery": [
+        "prepared",
+        "attempted",
+        "unknown"
+      ],
+      "status_after_first_recovery": "unknown"
+    }
+  ],
+  "all_passed": true
+}
