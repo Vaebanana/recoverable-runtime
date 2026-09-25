@@ -95,5 +95,7 @@ experiments/*
 !experiments/recovery_smoke/
 !experiments/recovery_matrix/
 !experiments/process_recovery/
+!experiments/native_history_baseline/
+experiments/native_history_baseline/results/
 !experiments/process_recovery/results/day10_results.json
 !experiments/process_recovery/results/day10_summary.md
