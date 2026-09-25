@@ -575,6 +575,10 @@ class AgentHistory(BaseModel):
 				model_output_dump['current_plan_item'] = self.model_output.current_plan_item
 			if self.model_output.plan_update is not None:
 				model_output_dump['plan_update'] = self.model_output.plan_update
+			for control_field in ('effect_boundary_action_index', 'completion_claim_unit_id'):
+				control_value = getattr(self.model_output, control_field, None)
+				if control_value is not None:
+					model_output_dump[control_field] = control_value
 
 		# Handle result serialization - don't filter ActionResult data
 		# as it should contain meaningful information for the agent

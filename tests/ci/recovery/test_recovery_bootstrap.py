@@ -247,3 +247,34 @@ def test_restore_uses_checkpoint_boundary_instead_of_uncommitted_ledger_tail(tmp
 		assert recovered.last_effect_seq == 1
 		assert recovered.states['u1'].status is UnitStatus.UNKNOWN
 		assert recovered.states['u1'].effect_status is EffectStatus.UNKNOWN
+
+
+def test_restore_sees_attempted_fact_after_prepared_checkpoint(tmp_path: Path) -> None:
+	semantic_contract = contract(has_side_effect=True)
+	checkpoint = RuntimeCheckpoint(
+		checkpoint_id='cp-prepared',
+		workflow_id='wf-1',
+		run_id='run-old',
+		contract_id='contract-1',
+		contract_version=1,
+		unit_states={'u1': UnitRuntimeState(unit_id='u1', status=UnitStatus.ACTIVE)},
+		active_unit_id='u1',
+		last_effect_seq=0,
+	)
+	draft = EffectRecordDraft(
+		effect_id='effect-1',
+		workflow_id='wf-1',
+		run_id='run-old',
+		unit_id='u1',
+		effect_key='submit',
+		attempt_id='attempt-1',
+		status=EffectRecordStatus.PREPARED,
+	)
+	with SQLiteRuntimeStorage(tmp_path / 'runtime.db') as storage:
+		storage.start_run(WorkflowRun(workflow_id='wf-1', run_id='run-old'))
+		storage.save_contract('wf-1', semantic_contract)
+		storage.commit_effect_and_checkpoint(draft, checkpoint)
+		storage.append_effect(draft.model_copy(update={'status': EffectRecordStatus.ATTEMPTED}))
+		recovered = RecoveryBootstrap(storage).restore('wf-1', 'run-new')
+		assert recovered.last_effect_seq == 2
+		assert recovered.states['u1'].status is UnitStatus.UNKNOWN

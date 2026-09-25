@@ -111,6 +111,8 @@ class ConditionSpec(FrozenModel):
 	"""Human-readable precondition or postcondition."""
 
 	description: str
+	expected_observation: str | None = None
+	negative_observation: str | None = None
 
 
 class EffectSpec(FrozenModel):
@@ -128,6 +130,8 @@ class VerificationSpec(FrozenModel):
 	required: bool = True
 	source: VerificationSource
 	procedure: str
+	observation_url: str | None = None
+	observation_is_read_only: bool = False
 
 
 class UnitIdentity(FrozenModel):

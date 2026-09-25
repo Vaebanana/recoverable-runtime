@@ -137,7 +137,17 @@ class RecoveryBootstrap:
 		except StorageNotFoundError as exc:
 			raise RecoveryBootstrapError(f'checkpoint {checkpoint.checkpoint_id} references a missing Contract version') from exc
 
-		effects = self._storage.read_effects(workflow_id, through_seq=checkpoint.last_effect_seq)
+		committed_effects = self._storage.read_effects(workflow_id, through_seq=checkpoint.last_effect_seq)
+		# ATTEMPTED is deliberately appended after the PREPARED checkpoint. A crash
+		# before finalization leaves this tail without a corresponding checkpoint.
+		open_tail = tuple(
+			record
+			for record in self._storage.read_effects(workflow_id)
+			if record.seq > checkpoint.last_effect_seq
+			and record.status in {EffectRecordStatus.PREPARED, EffectRecordStatus.ATTEMPTED, EffectRecordStatus.UNKNOWN}
+		)
+		effects = committed_effects + open_tail
+		last_effect_seq = max((record.seq for record in effects), default=checkpoint.last_effect_seq)
 		normalized = normalize_after_restart(contract, checkpoint.unit_states, effects)
 		self._scheduler.ready_unit_ids(contract, normalized)
 		in_flight = [
@@ -161,7 +171,7 @@ class RecoveryBootstrap:
 			contract=contract,
 			states=normalized,
 			active_unit_id=in_flight[0] if in_flight else None,
-			last_effect_seq=checkpoint.last_effect_seq,
+			last_effect_seq=last_effect_seq,
 			resumed_from_checkpoint_id=checkpoint.checkpoint_id,
 			requires_reverification=tuple(
 				unit_id for unit_id, state in normalized.items() if state.status is UnitStatus.COMPLETION_CANDIDATE

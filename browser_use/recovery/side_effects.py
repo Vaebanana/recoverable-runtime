@@ -97,6 +97,7 @@ class SideEffectCoordinator:
 		states: dict[str, UnitRuntimeState],
 		last_effect_seq: int,
 		executor: Callable[[], Awaitable[object]],
+		verifier_context: object | None = None,
 		idempotency_key: str | None = None,
 		after_prepared_hook: Callable[[], None] | None = None,
 		after_attempt_hook: Callable[[], None] | None = None,
@@ -197,7 +198,7 @@ class SideEffectCoordinator:
 				candidate_states,
 				unit_id,
 				self._verifier,
-				action_result,
+				verifier_context if verifier_context is not None else action_result,
 			)
 
 		final_status = _effect_record_status(verification_result.outcome)

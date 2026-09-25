@@ -20,6 +20,12 @@ from browser_use.recovery.browser_use_adapter import (
 	SemanticContextSink,
 	UnitSelectionRequiredError,
 )
+from browser_use.recovery.contract_validation import (
+	ContractPolicyError,
+	EffectPolicyValidator,
+	VerificationPolicyValidator,
+	validate_contract,
+)
 from browser_use.recovery.contracts import (
 	AddUnitOp,
 	ConditionSpec,
@@ -46,12 +52,22 @@ from browser_use.recovery.contracts import (
 	VerificationSpec,
 	VerificationStatus,
 )
+from browser_use.recovery.effect_boundary import EffectBoundaryDeclaration, EffectBoundaryExecutor, EffectBoundaryPlan
+from browser_use.recovery.harness import RecoverableHarness
 from browser_use.recovery.manager import (
 	ContractError,
 	ContractManager,
 	ContractValidationError,
 	IdentityConflictError,
 	StaleDeltaError,
+)
+from browser_use.recovery.observational_verifier import (
+	BrowserObservationSource,
+	BrowserObservationVerifier,
+	LLMObservationInterpreter,
+	ObservationalVerifier,
+	ObservationEvidence,
+	ObservationSnapshot,
 )
 from browser_use.recovery.persistence import (
 	CheckpointError,
@@ -68,6 +84,7 @@ from browser_use.recovery.persistence import (
 	StorageNotFoundError,
 	WorkflowRun,
 )
+from browser_use.recovery.prompt_memory import CompletedUnitSummary, UnitPromptMemoryPolicy
 from browser_use.recovery.reconciliation import (
 	ReconciliationCoordinator,
 	ReconciliationError,
@@ -98,6 +115,22 @@ from browser_use.recovery.verification import (
 )
 
 __all__ = [
+	'BrowserObservationSource',
+	'BrowserObservationVerifier',
+	'CompletedUnitSummary',
+	'ContractPolicyError',
+	'EffectBoundaryDeclaration',
+	'EffectBoundaryExecutor',
+	'EffectBoundaryPlan',
+	'EffectPolicyValidator',
+	'LLMObservationInterpreter',
+	'ObservationEvidence',
+	'ObservationSnapshot',
+	'ObservationalVerifier',
+	'RecoverableHarness',
+	'UnitPromptMemoryPolicy',
+	'VerificationPolicyValidator',
+	'validate_contract',
 	'AddUnitOp',
 	'BrowserActionBridge',
 	'BrowserActionBridgeError',

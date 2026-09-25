@@ -96,6 +96,7 @@ class BrowserUseRuntimeAdapter:
 		context_sink: SemanticContextSink | None = None,
 		state_manager: RuntimeStateManager | None = None,
 		context_builder: SemanticContextBuilder | None = None,
+		protect_side_effect_completion: bool = False,
 	) -> None:
 		self._contract = contract
 		self._state_manager = state_manager or RuntimeStateManager()
@@ -105,6 +106,7 @@ class BrowserUseRuntimeAdapter:
 		self._claim_source = claim_source
 		self._context_sink = context_sink or BrowserUseMessageContextSink()
 		self._context_builder = context_builder or SemanticContextBuilder()
+		self._protect_side_effect_completion = protect_side_effect_completion
 		self._trace: list[BrowserUseStepRecord] = []
 		self._last_context: SemanticRuntimeContext | None = None
 		self._context_builder.build(self._contract, self._states)
@@ -192,6 +194,9 @@ class BrowserUseRuntimeAdapter:
 			raise CompletionClaimError(
 				f'completion claim for {claim.candidate_unit_id} does not match active unit {active_unit_id}'
 			)
+		if active_unit.effect.has_side_effect and self._protect_side_effect_completion:
+			self._trace.append(self._step_record(agent, active_unit, claim, None))
+			raise CompletionClaimError(f'{active_unit.unit_id}: a plain completion claim cannot bypass the effect boundary')
 
 		candidate_states = self._state_manager.claim_completion(
 			self._contract,

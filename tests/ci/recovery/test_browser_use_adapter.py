@@ -54,7 +54,7 @@ def make_unit(unit_id: str, target_key: str = 'company_a/job_123') -> SemanticUn
 		),
 		intent='submit application',
 		target=TargetSpec(type='job', key=target_key, attributes={'job_id': target_key.rsplit('/', 1)[-1]}),
-		postconditions=(ConditionSpec(description='application exists with submitted status'),),
+		postconditions=(ConditionSpec(description='application exists with submitted status', expected_observation='submitted'),),
 		effect=EffectSpec(
 			has_side_effect=True,
 			idempotency=Idempotency.NON_IDEMPOTENT,
