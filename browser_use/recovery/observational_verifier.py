@@ -180,22 +180,15 @@ class BrowserObservationVerifier:
 
 
 class ObservationalVerifier:
-	"""Route a semantic unit to a supported read-only observation source."""
+	"""Verify Browser observations; external-tool verification is outside v1."""
 
 	observational = True
 
-	def __init__(
-		self,
-		browser: BrowserObservationVerifier,
-		external: BrowserObservationVerifier | None = None,
-	) -> None:
+	def __init__(self, browser: BrowserObservationVerifier) -> None:
 		self._browser = browser
-		self._external = external
 
 	async def verify(self, unit: SemanticUnit, context: object) -> VerificationResult:
 		"""Return INCONCLUSIVE if the declared observation source is unavailable."""
 		if unit.verification.source is VerificationSource.BROWSER:
 			return await self._browser.verify(unit, context)
-		if unit.verification.source is VerificationSource.EXTERNAL_TOOL and self._external is not None:
-			return await self._external.verify(unit, context)
 		return BrowserObservationVerifier._result(unit, VerificationOutcome.INCONCLUSIVE, {}, 'observation source unavailable')

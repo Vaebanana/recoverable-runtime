@@ -39,15 +39,11 @@ class EffectPolicyValidator:
 class VerificationPolicyValidator:
 	"""Reject missing or contradictory observation semantics."""
 
-	_MUTATING_PROCEDURE = re.compile(r'\b(click|submit|send|create|delete|write|input|type|purchase|publish)\b', re.I)
-	_VAGUE = {'task complete', 'task completed', 'done', 'complete', 'completed', '任务完成', '看看页面'}
-
 	def validate(self, unit: SemanticUnit) -> None:
 		"""Check structural evidence requirements; runtime capabilities enforce read-only access."""
-		if not unit.postconditions or any(
-			condition.description.strip().lower() in self._VAGUE or not condition.description.strip()
-			for condition in unit.postconditions
-		):
+		if not unit.target.type.strip() or not unit.target.key.strip():
+			raise ContractPolicyError(f'{unit.unit_id}: a target type and key are required')
+		if not unit.postconditions or any(not condition.description.strip() for condition in unit.postconditions):
 			raise ContractPolicyError(f'{unit.unit_id}: observable postconditions are required')
 		if any(
 			not condition.expected_observation or not condition.expected_observation.strip() for condition in unit.postconditions
@@ -56,12 +52,10 @@ class VerificationPolicyValidator:
 		verification = unit.verification
 		if unit.effect.has_side_effect and not verification.required:
 			raise ContractPolicyError(f'{unit.unit_id}: side effects require verification')
-		if verification.source not in {VerificationSource.BROWSER, VerificationSource.EXTERNAL_TOOL}:
-			raise ContractPolicyError(f'{unit.unit_id}: unsupported observation source')
-		if not verification.procedure.strip() or verification.procedure.strip().lower() in self._VAGUE:
+		if verification.source is not VerificationSource.BROWSER:
+			raise ContractPolicyError(f'{unit.unit_id}: {verification.source.name} is outside RecoverableHarness v1')
+		if not verification.procedure.strip():
 			raise ContractPolicyError(f'{unit.unit_id}: a concrete observation procedure is required')
-		if self._MUTATING_PROCEDURE.search(verification.procedure):
-			raise ContractPolicyError(f'{unit.unit_id}: verification procedure describes an action')
 		if verification.observation_url is not None:
 			if not verification.observation_is_read_only:
 				raise ContractPolicyError(f'{unit.unit_id}: observation_url requires an explicit read-only assertion')

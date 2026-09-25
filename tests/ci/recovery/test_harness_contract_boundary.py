@@ -2,18 +2,26 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
+from types import MethodType, SimpleNamespace
 from typing import Any, cast
 
 import pytest
 
+from browser_use.agent.service import Agent
 from browser_use.agent.views import ActionResult
-from browser_use.recovery.browser_use_adapter import BrowserUseRuntimeAdapter, CompletionClaim, CompletionClaimError
+from browser_use.recovery.browser_use_adapter import (
+	BrowserUseCompatibilityError,
+	BrowserUseRuntimeAdapter,
+	CompletionClaim,
+	CompletionClaimError,
+)
+from browser_use.recovery.browser_use_compatibility import SUPPORTED_BROWSER_USE_VERSION, assert_browser_use_compatibility
 from browser_use.recovery.contract_validation import ContractPolicyError, validate_contract
-from browser_use.recovery.contracts import Reversibility
+from browser_use.recovery.contracts import Reversibility, VerificationSource
 from browser_use.recovery.effect_boundary import EffectBoundaryDeclaration, EffectBoundaryPlan
 from browser_use.recovery.harness import RecoverableHarness
 from browser_use.recovery.verification import VerificationOutcome
+from experiments.native_history_baseline.scripted_llm import ScriptedLLM, done_output
 from tests.ci.recovery.test_browser_use_adapter import (
 	CollectingSink,
 	FakeAgent,
@@ -47,6 +55,48 @@ def test_observation_url_requires_read_only_assertion() -> None:
 	)
 	with pytest.raises(ContractPolicyError, match='read-only assertion'):
 		validate_contract(make_contract(unit))
+
+
+def test_read_only_procedure_can_name_a_mutating_button() -> None:
+	unit = make_unit('u1')
+	unit = unit.model_copy(
+		update={'verification': unit.verification.model_copy(update={'procedure': 'inspect delete button state'})}
+	)
+	assert validate_contract(make_contract(unit)).get_unit('u1').verification.procedure == 'inspect delete button state'
+
+
+def test_external_tool_source_is_outside_harness_v1() -> None:
+	unit = make_unit('u1')
+	unit = unit.model_copy(
+		update={'verification': unit.verification.model_copy(update={'source': VerificationSource.EXTERNAL_TOOL})}
+	)
+	with pytest.raises(ContractPolicyError, match='EXTERNAL_TOOL'):
+		validate_contract(make_contract(unit))
+
+
+def test_harness_native_seams_match_pinned_browser_use_version() -> None:
+	agent = Agent(task='Check native seams', llm=ScriptedLLM([done_output()]), enable_signal_handler=False)
+	assert agent.version == SUPPORTED_BROWSER_USE_VERSION
+	assert_browser_use_compatibility(agent)
+
+
+def test_harness_rejects_changed_browser_use_version() -> None:
+	agent = Agent(task='Check version pin', llm=ScriptedLLM([done_output()]), enable_signal_handler=False)
+	agent.version = '0.13.11'
+	with pytest.raises(BrowserUseCompatibilityError, match=SUPPORTED_BROWSER_USE_VERSION):
+		assert_browser_use_compatibility(agent)
+
+
+@pytest.mark.parametrize('seam', ['multi_act', '_get_next_action', '_make_history_item'])
+def test_harness_rejects_changed_native_seam(seam: str, monkeypatch: pytest.MonkeyPatch) -> None:
+	agent = Agent(task='Check changed seam', llm=ScriptedLLM([done_output()]), enable_signal_handler=False)
+
+	async def incompatible(self) -> None:
+		return None
+
+	monkeypatch.setattr(agent, seam, MethodType(incompatible, agent))
+	with pytest.raises(BrowserUseCompatibilityError, match=seam):
+		assert_browser_use_compatibility(agent)
 
 
 def test_obvious_effect_semantics_are_conservatively_upgraded() -> None:

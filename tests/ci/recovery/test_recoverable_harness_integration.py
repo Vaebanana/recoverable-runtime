@@ -14,6 +14,7 @@ from browser_use import BrowserProfile
 from browser_use.agent.service import Agent
 from browser_use.browser.session import BrowserSession
 from browser_use.llm.views import ChatInvokeCompletion
+from browser_use.recovery.browser_use_adapter import RuntimeProgressBlockedError
 from browser_use.recovery.contracts import (
 	ConditionSpec,
 	EffectSpec,
@@ -41,11 +42,29 @@ from experiments.native_history_baseline.scripted_llm import ScriptedLLM, done_o
 
 
 class PageInterpreter:
+	def __init__(self, *, allow_submit_evidence: bool = True) -> None:
+		self.allow_submit_evidence = allow_submit_evidence
+
 	async def extract(self, unit: SemanticUnit, snapshot: ObservationSnapshot) -> ObservationEvidence:
+		if unit.unit_id == 'u_submit':
+			if not self.allow_submit_evidence:
+				return ObservationEvidence(target_quote='Application #7', condition_quotes=('',))
+			positive = 'Status: SUBMITTED' if 'Status: SUBMITTED' in snapshot.text else ''
+			negative = 'Status: NOT_SUBMITTED' if 'Status: NOT_SUBMITTED' in snapshot.text else None
+			status_quote = positive or negative or ''
+			record = next(
+				(line for line in snapshot.text.splitlines() if 'Application #7' in line and status_quote in line),
+				'',
+			)
+			return ObservationEvidence(
+				record_quote=record,
+				target_quote='Application #7',
+				condition_quotes=(positive,),
+				negative_quote=negative,
+			)
 		quote = {
 			'u_locate': 'Application #7',
 			'u_fill': 'John Doe',
-			'u_submit': 'Status: SUBMITTED',
 		}[unit.unit_id]
 		record = next((line for line in snapshot.text.splitlines() if 'Application #7' in line and quote in line), '')
 		return ObservationEvidence(record_quote=record, target_quote='Application #7', condition_quotes=(quote,))
@@ -123,7 +142,13 @@ def contract(observation_url: str | None = None) -> SemanticContract:
 		identity=UnitIdentity(intent_key='submit_application', target_key='application/7', outcome_key='submitted'),
 		intent='submit application',
 		target=TargetSpec(type='application', key='application/7', attributes={'application_id': '7'}),
-		postconditions=(ConditionSpec(description='application status is submitted', expected_observation='Status: SUBMITTED'),),
+		postconditions=(
+			ConditionSpec(
+				description='application status is submitted',
+				expected_observation='Status: SUBMITTED',
+				negative_observation='Status: NOT_SUBMITTED',
+			),
+		),
 		effect=EffectSpec(has_side_effect=True, idempotency=Idempotency.NON_IDEMPOTENT, reversibility=Reversibility.UNKNOWN),
 		verification=VerificationSpec(
 			source=VerificationSource.BROWSER,
@@ -147,6 +172,20 @@ class CrashAfterAttemptStorage(SQLiteRuntimeStorage):
 			self.crash_on_attempt = False
 			raise SimulatedCrash('after attempted')
 		return record
+
+
+class CrashAfterPreparedStorage(SQLiteRuntimeStorage):
+	"""Interrupt after PREPARED and its checkpoint are both durable."""
+
+	crash_on_prepared = True
+
+	def commit_effect_and_checkpoint(self, draft, checkpoint):
+		"""Persist PREPARED before preventing the native browser action."""
+		committed = super().commit_effect_and_checkpoint(draft, checkpoint)
+		if draft.status is EffectRecordStatus.PREPARED and self.crash_on_prepared:
+			self.crash_on_prepared = False
+			raise SimulatedCrash('after prepared')
+		return committed
 
 
 class CrashAfterFinalizeAgent(Agent):
@@ -188,9 +227,9 @@ async def test_finalized_history_is_durable_before_step_end_hook(tmp_path: Path,
 		await browser.kill()
 
 
-@pytest.mark.parametrize('crash_after_attempt', [False, True])
+@pytest.mark.parametrize('scenario', ['normal', 'after_prepared', 'after_attempted', 'inconclusive'])
 @pytest.mark.asyncio
-async def test_native_click_is_guarded_and_history_is_durable(tmp_path: Path, httpserver, crash_after_attempt: bool) -> None:
+async def test_native_click_is_guarded_and_history_is_durable(tmp_path: Path, httpserver, scenario: str) -> None:
 	world = {'count': 0}
 
 	def page() -> str:
@@ -217,10 +256,16 @@ async def test_native_click_is_guarded_and_history_is_durable(tmp_path: Path, ht
 		enable_signal_handler=False,
 		final_response_after_failure=False,
 	)
-	verifier = BrowserObservationVerifier(BrowserObservationSource(), PageInterpreter())
+	interpreter = PageInterpreter(allow_submit_evidence=scenario != 'inconclusive')
+	verifier = BrowserObservationVerifier(BrowserObservationSource(), interpreter)
 	history_path = tmp_path / 'history.json'
 	try:
-		storage_type = CrashAfterAttemptStorage if crash_after_attempt else SQLiteRuntimeStorage
+		storage_type = {
+			'normal': SQLiteRuntimeStorage,
+			'after_prepared': CrashAfterPreparedStorage,
+			'after_attempted': CrashAfterAttemptStorage,
+			'inconclusive': SQLiteRuntimeStorage,
+		}[scenario]
 		with storage_type(tmp_path / 'runtime.db') as storage:
 			harness = RecoverableHarness(
 				agent=agent,
@@ -230,15 +275,28 @@ async def test_native_click_is_guarded_and_history_is_durable(tmp_path: Path, ht
 				history_path=history_path,
 				verifier=verifier,
 			)
-			if crash_after_attempt:
+			if scenario in {'after_prepared', 'after_attempted'}:
 				with pytest.raises(SimulatedCrash):
 					await harness.run(max_steps=6)
-				assert [record.status.value for record in storage.read_effects('wf-1')] == ['prepared', 'attempted']
+				assert [record.status.value for record in storage.read_effects('wf-1')] == (
+					['prepared'] if scenario == 'after_prepared' else ['prepared', 'attempted']
+				)
 				assert len(json.loads(history_path.read_text(encoding='utf-8'))['history']) == 2
+			elif scenario == 'inconclusive':
+				with pytest.raises(RuntimeProgressBlockedError):
+					await harness.run(max_steps=4)
+				assert harness.adapter.states['u_submit'].status is UnitStatus.UNKNOWN
+				assert [record.status.value for record in storage.read_effects('wf-1')] == ['prepared', 'attempted', 'unknown']
+			if scenario != 'normal':
 				resumed_browser = BrowserSession(browser_profile=BrowserProfile(headless=True, user_data_dir=None))
+				if scenario == 'after_prepared':
+					resume_llm = ClickScript(url)
+					resume_llm._index = 2
+				else:
+					resume_llm = ScriptedLLM([done_output()])
 				resumed_agent = Agent(
 					task='Finish application 7 workflow',
-					llm=ScriptedLLM([done_output()]),
+					llm=resume_llm,
 					browser_session=resumed_browser,
 					use_vision=False,
 					directly_open_url=False,
@@ -246,6 +304,7 @@ async def test_native_click_is_guarded_and_history_is_durable(tmp_path: Path, ht
 					final_response_after_failure=False,
 				)
 				try:
+					interpreter.allow_submit_evidence = True
 					resumed = await RecoverableHarness.resume(
 						agent=resumed_agent,
 						storage=storage,
@@ -253,20 +312,31 @@ async def test_native_click_is_guarded_and_history_is_durable(tmp_path: Path, ht
 						history_path=history_path,
 						verifier=verifier,
 					)
-					assert all(state.status is UnitStatus.COMPLETED for state in resumed.adapter.states.values())
+					if scenario == 'after_prepared':
+						assert resumed.adapter.states['u_submit'].status is UnitStatus.ACTIVE
+						assert world['count'] == 0
+					else:
+						assert all(state.status is UnitStatus.COMPLETED for state in resumed.adapter.states.values())
 					await resumed.run(max_steps=6)
 				finally:
 					await resumed_browser.kill()
 			else:
 				await harness.run(max_steps=6)
 			assert world['count'] == 1
-			if not crash_after_attempt:
+			if scenario == 'normal':
 				assert all(state.status is UnitStatus.COMPLETED for state in harness.adapter.states.values())
-			assert [record.status.value for record in storage.read_effects('wf-1')] == ['prepared', 'attempted', 'committed']
-			assert len(json.loads(history_path.read_text(encoding='utf-8'))['history']) >= (3 if crash_after_attempt else 4)
+			assert [record.status.value for record in storage.read_effects('wf-1')] == {
+				'normal': ['prepared', 'attempted', 'committed'],
+				'after_prepared': ['prepared', 'not_applied', 'prepared', 'attempted', 'committed'],
+				'after_attempted': ['prepared', 'attempted', 'committed'],
+				'inconclusive': ['prepared', 'attempted', 'unknown', 'committed'],
+			}[scenario]
+			assert len(json.loads(history_path.read_text(encoding='utf-8'))['history']) >= (
+				3 if scenario == 'after_attempted' else 4
+			)
 			assert 'u_locate' in llm.prompts[1] and 'Completed semantic units' in llm.prompts[1]
 			assert 'Navigated to' not in llm.prompts[1]
-			if not crash_after_attempt:
+			if scenario == 'normal':
 				assert 'u_submit' in llm.prompts[3] and 'Completed semantic units' in llm.prompts[3]
 				assert 'Clicked button' not in llm.prompts[3]
 				persisted = json.loads(history_path.read_text(encoding='utf-8'))['history']

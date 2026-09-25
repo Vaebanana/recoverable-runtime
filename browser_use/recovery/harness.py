@@ -23,6 +23,7 @@ from browser_use.recovery.browser_use_adapter import (
 	CompletionClaimSource,
 	SemanticContextSink,
 )
+from browser_use.recovery.browser_use_compatibility import assert_browser_use_compatibility
 from browser_use.recovery.contract_validation import ContractPolicyError, validate_contract
 from browser_use.recovery.contracts import SemanticContract, SemanticUnit, UnitRuntimeState, UnitStatus, VerificationSource
 from browser_use.recovery.effect_boundary import EffectBoundaryDeclaration, EffectBoundaryExecutor, EffectBoundaryPlan
@@ -93,6 +94,7 @@ class RecoverableHarness:
 		_start_run: bool = True,
 	) -> None:
 		self.agent = agent
+		assert_browser_use_compatibility(agent)
 		self.contract = validate_contract(contract)
 		self.storage = storage
 		self.workflow_id = workflow_id
@@ -107,8 +109,6 @@ class RecoverableHarness:
 		self._context_sink = _DeferredContextSink()
 		self._prompt_memory = UnitPromptMemoryPolicy()
 		if verifier is None:
-			if any(unit.verification.source is VerificationSource.EXTERNAL_TOOL for unit in self.contract.units):
-				raise ContractPolicyError('external_tool verification requires a read-only verifier')
 			if any(
 				unit.effect.has_side_effect
 				and unit.verification.source is VerificationSource.BROWSER
