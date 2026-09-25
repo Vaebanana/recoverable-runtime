@@ -1,5 +1,6 @@
 """Page class for page-level operations."""
 
+import asyncio
 from typing import TYPE_CHECKING, TypeVar
 
 from pydantic import BaseModel
@@ -365,29 +366,30 @@ class Page:
 
 	# Element finding methods (these would need to be implemented based on DOM queries)
 	async def get_elements_by_css_selector(self, selector: str) -> list['Element']:
-		"""Get elements by CSS selector."""
+		"""Get elements by CSS selector, refreshing the document after navigation races."""
 		session_id = await self._ensure_session()
-
-		# Get document first
-		doc_result = await self._client.send.DOM.getDocument(session_id=session_id)
-		document_node_id = doc_result['root']['nodeId']
-
-		# Query selector all
-		query_params: 'QuerySelectorAllParameters' = {'nodeId': document_node_id, 'selector': selector}
-		result = await self._client.send.DOM.querySelectorAll(query_params, session_id=session_id)
-
-		elements = []
 		from .element import Element as Element_
 
-		# Convert node IDs to backend node IDs
-		for node_id in result['nodeIds']:
-			# Get backend node ID
-			describe_params: 'DescribeNodeParameters' = {'nodeId': node_id}
-			node_result = await self._client.send.DOM.describeNode(describe_params, session_id=session_id)
-			backend_node_id = node_result['node']['backendNodeId']
-			elements.append(Element_(self._browser_session, backend_node_id, session_id))
+		for attempt in range(3):
+			try:
+				# Navigation can replace this root before the following CDP command.
+				doc_result = await self._client.send.DOM.getDocument(session_id=session_id)
+				query_params: 'QuerySelectorAllParameters' = {'nodeId': doc_result['root']['nodeId'], 'selector': selector}
+				result = await self._client.send.DOM.querySelectorAll(query_params, session_id=session_id)
 
-		return elements
+				elements = []
+				for node_id in result['nodeIds']:
+					describe_params: 'DescribeNodeParameters' = {'nodeId': node_id}
+					node_result = await self._client.send.DOM.describeNode(describe_params, session_id=session_id)
+					backend_node_id = node_result['node']['backendNodeId']
+					elements.append(Element_(self._browser_session, backend_node_id, session_id))
+				return elements
+			except RuntimeError as exc:
+				if 'Could not find node with given id' not in str(exc) or attempt == 2:
+					raise
+				await asyncio.sleep(0.05 * (attempt + 1))
+
+		raise AssertionError('unreachable')
 
 	# AI METHODS
 

@@ -3,16 +3,45 @@
 import asyncio
 import socket
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import pytest
 import uvicorn
 
+from browser_use.actor.page import Page
 from browser_use.browser.session import BrowserSession
 from experiments.recovery_matrix.baseline import run_baseline_trial
 from experiments.recovery_matrix.harness import run_harness_trial
 from experiments.recovery_matrix.models import FaultScenario
 from experiments.recovery_smoke import server as smoke_server_module
+
+
+@pytest.mark.asyncio
+async def test_selector_reloads_document_after_stale_node() -> None:
+	"""A navigation can invalidate the DOM root between getDocument and querySelectorAll."""
+
+	class FakeDOM:
+		def __init__(self) -> None:
+			self.document_calls = 0
+			self.query_calls = 0
+
+		async def getDocument(self, *, session_id: str) -> dict[str, object]:
+			self.document_calls += 1
+			return {'root': {'nodeId': self.document_calls}}
+
+		async def querySelectorAll(self, params: dict[str, object], *, session_id: str) -> dict[str, object]:
+			self.query_calls += 1
+			if self.query_calls == 1:
+				raise RuntimeError({'code': -32000, 'message': 'Could not find node with given id'})
+			assert params['nodeId'] == 2
+			return {'nodeIds': []}
+
+	dom = FakeDOM()
+	browser = SimpleNamespace(cdp_client=SimpleNamespace(send=SimpleNamespace(DOM=dom)))
+	page = Page(browser, target_id='target', session_id='session')  # type: ignore[arg-type]
+	assert await page.get_elements_by_css_selector('#submit-btn') == []
+	assert dom.document_calls == dom.query_calls == 2
 
 
 @pytest.fixture
