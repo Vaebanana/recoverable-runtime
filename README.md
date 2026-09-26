@@ -1,5 +1,7 @@
 # Recoverable Runtime for Long-Horizon Web Agents
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 A fault-tolerant execution layer built on **Browser Use v0.13.10** for side-effectful long-horizon web-agent tasks.
 
 The project focuses on one failure mode that ordinary task restart cannot safely solve:
