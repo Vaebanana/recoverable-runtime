@@ -45,6 +45,14 @@ private_example.py
 private_example
 CLAUDE.local.md
 
+# Recoverable Runtime local state
+.browser_use_recovery/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
 uv.lock
 temp
 tmp
@@ -54,7 +62,6 @@ credentials.json
 token.json
 
 !docs/docs.json
-
 
 temp-profile-*
 
@@ -68,7 +75,6 @@ all_github_issues.md
 todo-input-token.md
 
 TOOL_CHANGES_SUMMARY.md
-
 
 claude-code-todo
 result_judge.md
@@ -85,7 +91,6 @@ product_extraction.py
 plot.py
 
 .claude/
-
 
 # personal
 recoverable_runtime_MVP_docs
