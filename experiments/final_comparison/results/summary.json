@@ -1,0 +1,35 @@
+{
+  "experiment": "native_agent_history_vs_recoverable_harness",
+  "generated_at": "2026-09-25T17:03:20.290952+00:00",
+  "caveat": "Crash scenarios are equally weighted controlled cases, not estimates of production crash probabilities.",
+  "per_scenario": {
+    "normal": {
+      "native": {"trials":20,"task_completion_rate":100.0,"safe_recovery_rate":100.0,"duplicate_effect_rate":0.0,"unsafe_retry_rate":0.0,"mean_actions_before_crash":4.0,"mean_actions_after_resume":0.0,"mean_replayed_actions":0.0,"mean_reexecuted_actions":0.0,"mean_recovery_duration_ms":0.0},
+      "harness": {"trials":20,"task_completion_rate":100.0,"safe_recovery_rate":100.0,"duplicate_effect_rate":0.0,"unsafe_retry_rate":0.0,"mean_actions_before_crash":4.0,"mean_actions_after_resume":0.0,"mean_replayed_actions":0.0,"mean_reexecuted_actions":0.0,"mean_recovery_duration_ms":0.0}
+    },
+    "before_effect": {
+      "native": {"trials":20,"task_completion_rate":100.0,"safe_recovery_rate":100.0,"duplicate_effect_rate":0.0,"unsafe_retry_rate":0.0,"mean_actions_before_crash":2.0,"mean_actions_after_resume":2.0,"mean_replayed_actions":2.0,"mean_reexecuted_actions":2.0,"mean_recovery_duration_ms":7313.199999998324},
+      "harness": {"trials":20,"task_completion_rate":100.0,"safe_recovery_rate":100.0,"duplicate_effect_rate":0.0,"unsafe_retry_rate":0.0,"mean_actions_before_crash":2.0,"mean_actions_after_resume":3.0,"mean_replayed_actions":2.0,"mean_reexecuted_actions":2.0,"mean_recovery_duration_ms":7703.05000001099}
+    },
+    "after_effect_before_attempted": {
+      "native": {"trials":20,"task_completion_rate":100.0,"safe_recovery_rate":0.0,"duplicate_effect_rate":100.0,"unsafe_retry_rate":100.0,"mean_actions_before_crash":3.0,"mean_actions_after_resume":2.0,"mean_replayed_actions":2.0,"mean_reexecuted_actions":3.0,"mean_recovery_duration_ms":5080.4000000003725},
+      "harness": {"trials":20,"task_completion_rate":100.0,"safe_recovery_rate":100.0,"duplicate_effect_rate":0.0,"unsafe_retry_rate":0.0,"mean_actions_before_crash":3.0,"mean_actions_after_resume":1.0,"mean_replayed_actions":2.0,"mean_reexecuted_actions":2.0,"mean_recovery_duration_ms":4306.949999992503}
+    },
+    "after_attempted_before_history": {
+      "native": {"trials":20,"task_completion_rate":100.0,"safe_recovery_rate":0.0,"duplicate_effect_rate":100.0,"unsafe_retry_rate":100.0,"mean_actions_before_crash":3.0,"mean_actions_after_resume":2.0,"mean_replayed_actions":2.0,"mean_reexecuted_actions":3.0,"mean_recovery_duration_ms":5093.800000008196},
+      "harness": {"trials":20,"task_completion_rate":100.0,"safe_recovery_rate":100.0,"duplicate_effect_rate":0.0,"unsafe_retry_rate":0.0,"mean_actions_before_crash":3.0,"mean_actions_after_resume":1.0,"mean_replayed_actions":2.0,"mean_reexecuted_actions":2.0,"mean_recovery_duration_ms":4389.750000019558}
+    },
+    "after_history_commit": {
+      "native": {"trials":20,"task_completion_rate":100.0,"safe_recovery_rate":100.0,"duplicate_effect_rate":0.0,"unsafe_retry_rate":0.0,"mean_actions_before_crash":3.0,"mean_actions_after_resume":1.0,"mean_replayed_actions":2.0,"mean_reexecuted_actions":2.0,"mean_recovery_duration_ms":4124.400000000605},
+      "harness": {"trials":20,"task_completion_rate":100.0,"safe_recovery_rate":100.0,"duplicate_effect_rate":0.0,"unsafe_retry_rate":0.0,"mean_actions_before_crash":3.0,"mean_actions_after_resume":1.0,"mean_replayed_actions":2.0,"mean_reexecuted_actions":2.0,"mean_recovery_duration_ms":4443.100000004051}
+    },
+    "verifier_unavailable": {
+      "native": {"trials":20,"task_completion_rate":100.0,"safe_recovery_rate":0.0,"duplicate_effect_rate":100.0,"unsafe_retry_rate":100.0,"mean_actions_before_crash":3.0,"mean_actions_after_resume":2.0,"mean_replayed_actions":2.0,"mean_reexecuted_actions":3.0,"mean_recovery_duration_ms":4947.549999988405},
+      "harness": {"trials":20,"task_completion_rate":100.0,"safe_recovery_rate":100.0,"duplicate_effect_rate":0.0,"unsafe_retry_rate":0.0,"mean_actions_before_crash":3.0,"mean_actions_after_resume":1.0,"mean_replayed_actions":4.0,"mean_reexecuted_actions":2.0,"mean_recovery_duration_ms":8431.950000004144}
+    }
+  },
+  "aggregate": {
+    "native": {"trials":120,"task_completion_rate":100.0,"safe_recovery_rate":50.0,"duplicate_effect_rate":50.0,"unsafe_retry_rate":50.0,"mean_actions_before_crash":3.0,"mean_actions_after_resume":1.5,"mean_replayed_actions":1.6666666666666667,"mean_reexecuted_actions":2.1666666666666665,"mean_recovery_duration_ms":4426.55833333265},
+    "harness": {"trials":120,"task_completion_rate":100.0,"safe_recovery_rate":100.0,"duplicate_effect_rate":0.0,"unsafe_retry_rate":0.0,"mean_actions_before_crash":3.0,"mean_actions_after_resume":1.1666666666666667,"mean_replayed_actions":2.0,"mean_reexecuted_actions":1.6666666666666667,"mean_recovery_duration_ms":4879.133333338541}
+  }
+}
