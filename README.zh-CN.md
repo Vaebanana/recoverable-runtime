@@ -105,68 +105,113 @@ ATTEMPTED  <- Runtime 已确认跨过外部副作用边界
 
 ## Recovery 实验
 
-仓库不仅包含单元测试，还设计了可控故障实验，用于验证真正的崩溃恢复行为。
+项目的主实验是 **Native Browser Use AgentHistory vs RecoverableHarness 的公平对比**，而不是早期的 restart-from-task 下界基线。
 
-### Recovery Matrix
+两边都使用 Browser Use 0.13.10，并保持相同的 Scripted Task、浏览器配置、原生 `navigate -> input -> click -> done` 动作链、进程级 crash、逐 Step AgentHistory 持久化、safe history replay 和 history-aware resume。
 
-实验位于：
+Harness 相比 Native 唯一新增的核心变量是：
 
 ```text
-experiments/recovery_matrix/
+Semantic Contract
++ Runtime Checkpoint
++ Effect Ledger
++ Verification
++ Reconciliation
++ Safety Gate
 ```
 
-提交的实验结果：
+实验任务是一个非幂等 application submit。独立 SQLite 应用服务器记录真实外部状态：
 
-[experiments/recovery_matrix/results/latest.md](experiments/recovery_matrix/results/latest.md)
+```text
+status
+submit_count
+```
 
-实验分别在以下三个位置制造故障：
+因此实验结果不是由 Harness 自己判定，而是由 External World 作为 Ground Truth。
 
-- `after_prepared`：已经持久化 PREPARED，但外部动作尚未执行；
-- `after_attempted`：外部动作已经执行并记录 ATTEMPTED；
-- `verifier_unavailable`：副作用可能已经发生，但首次 Verification 无法得到确定结论。
+### 最终 Benchmark：240 个 Controlled Trials
 
-每个场景在 baseline 与 harness 下各重复 5 次，最终结果如下：
+代码位于：
 
-| 指标 | Restart Baseline | Recoverable Harness |
+```text
+experiments/final_comparison/
+```
+
+正式结果：
+
+[experiments/final_comparison/results/summary.md](experiments/final_comparison/results/summary.md)
+
+最终测试 6 个场景，每个场景分别运行 Native ×20、Harness ×20：
+
+- `normal`
+- `before_effect`
+- `after_effect_before_attempted`
+- `after_attempted_before_history`
+- `after_history_commit`
+- `verifier_unavailable`
+
+总计：
+
+```text
+6 × 2 × 20 = 240 trials
+```
+
+Aggregate 结果：
+
+| 模式 | Trials | Task Completion | Safe Recovery | Duplicate Effect | Unsafe Retry |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Native AgentHistory | 120 | 100.0% | 50.0% | 50.0% | 50.0% |
+| Recoverable Harness | 120 | 100.0% | 100.0% | 0.0% | 0.0% |
+
+这些 Scenario 是人为等权的 controlled cases，**不能解释成真实生产环境中的 crash 概率**。
+
+因此正确结论不是：
+
+> “Native Browser Use 有 50% 概率恢复失败。”
+
+而是：
+
+> **在本实验定义的 6 类 crash condition 中，有 3 类场景会出现“外部副作用已经发生，但 AgentHistory 尚未持久化这个事实”的窗口；Native history-aware resume 在这 3 类场景中会再次执行 submit，而 Harness 会保留副作用不确定性并先 Reconciliation。**
+
+三个关键场景：
+
+| Scenario | Native | Harness |
+| --- | --- | --- |
+| after_effect_before_attempted | 20/20 duplicate + unsafe retry | 20/20 safe recovery |
+| after_attempted_before_history | 20/20 duplicate + unsafe retry | 20/20 safe recovery |
+| verifier_unavailable | 20/20 duplicate + unsafe retry | 20/20 在 UNKNOWN 时阻塞，证据恢复后安全完成 |
+
+这个实验最准确的结论是：
+
+> **AgentHistory 的可靠边界发生在 Browser Step finalize；Harness 把副作用可靠边界前移到了 Browser Step 内部。**
+
+### Recovery Cost
+
+恢复时间属于 secondary metric，因为 Browser 启动本身占据较大噪声。
+
+| 模式 | 平均 Recovery 时间 | 平均 Re-executed Actions |
+| --- | ---: | ---: |
+| Native | 4426.6 ms | 2.17 |
+| Harness | 4879.1 ms | 1.67 |
+
+Harness 增加了语义恢复与对账成本，但减少了部分不安全的重复执行。
+
+### 早期 Lower-bound 实验
+
+`experiments/recovery_matrix/` 是项目早期的下界实验，对比对象是“不保存 durable effect history、直接 restart-from-task”的 baseline。
+
+它仍然保留用于展示项目演进，但**不再作为主对比实验**。
+
+该实验结果为：
+
+| 指标 | Restart-from-task | Recoverable Harness |
 | --- | ---: | ---: |
 | Task Completion Rate | 100.0% | 100.0% |
 | Safe Recovery Rate | 33.3% | 100.0% |
 | Duplicate Effect Rate | 66.7% | 0.0% |
 | Unsafe Retry Rate | 66.7% | 0.0% |
 
-这里需要特别说明：
-
-> 表格中的 Baseline 是“restart-from-task，不保存 durable effect history”的对照实验，不代表 Browser Use 所有可能的恢复方式。
-
-项目另外实现了 Native Browser Use `AgentHistory` baseline：
-
-```text
-experiments/native_history_baseline/
-```
-
-用于单独评估 Browser Use 原生 History / Replay 能力，与语义级副作用状态管理进行区分。
-
-### 跨进程 Crash Recovery
-
-跨进程实验位于：
-
-```text
-experiments/process_recovery/
-```
-
-实验使用独立 Worker Process 和 hard exit 制造真实进程终止，再依赖 SQLite 中的持久化状态恢复 Workflow。
-
-结果：
-
-[experiments/process_recovery/results/day10_summary.md](experiments/process_recovery/results/day10_summary.md)
-
-| 场景 | 最终 Unit | 最终 Effect | Verification | 外部 submit 次数 |
-| --- | --- | --- | --- | ---: |
-| after_prepared | completed | committed | verified | 1 |
-| after_attempted | completed | committed | verified | 1 |
-| verifier_unavailable | completed | committed | verified | 1 |
-
-完整实验设计与指标定义见：
+完整实验方法与演进说明见：
 
 [docs/recoverable-runtime/experiments.md](docs/recoverable-runtime/experiments.md)
 
@@ -238,9 +283,10 @@ tests/ci/recovery/               # Recovery 回归测试
 
 experiments/
 ├── recovery_smoke/              # 可控的本地外部世界
-├── recovery_matrix/             # Baseline vs Harness 故障矩阵
+├── final_comparison/            # 最终 Native AgentHistory vs Harness 公平对比
+├── recovery_matrix/             # 早期 restart lower-bound 故障矩阵
 ├── process_recovery/            # 跨进程 hard-crash 恢复
-└── native_history_baseline/     # Native AgentHistory 对照实验
+└── native_history_baseline/     # 早期 Native AgentHistory baseline
 ```
 
 ---
@@ -260,6 +306,7 @@ Recovery Runtime 基于 Browser Use v0.13.10 开发。用于区分上游与本�
 - `browser_use/recovery/`
 - `tests/ci/recovery/`
 - `experiments/recovery_smoke/`
+- `experiments/final_comparison/`
 - `experiments/recovery_matrix/`
 - `experiments/process_recovery/`
 - `experiments/native_history_baseline/`
@@ -286,7 +333,15 @@ git diff 5c892e013a73e6622e6f50336e1eb0aa2c4405f2..main -- browser_use/recovery
 uv run pytest tests/ci/recovery -q
 ```
 
-### Recovery Matrix
+### 最终 Native AgentHistory vs Harness Benchmark
+
+```bash
+uv run python -m experiments.final_comparison.runner
+```
+
+默认每个 scenario / mode 重复 20 次，共 240 trials。
+
+### 早期 Recovery Matrix
 
 终端 1：
 
