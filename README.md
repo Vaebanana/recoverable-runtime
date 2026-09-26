@@ -104,48 +104,89 @@ crash after submit
 
 ## Recovery experiments
 
-The repository contains controlled crash experiments rather than relying only on happy-path unit tests.
+The main evaluation is a **fair Native Browser Use AgentHistory vs RecoverableHarness comparison**, not the earlier restart-from-task lower bound.
 
-### Recovery matrix
+Both arms use Browser Use 0.13.10, the same scripted task, browser settings, native `navigate -> input -> click -> done` action sequence, process-level crash injection, per-step AgentHistory persistence, safe history replay, and history-aware resume. The Harness arm adds only the recovery semantics: Semantic Contract, Runtime Checkpoint, Effect Ledger, Verification, Reconciliation, and the runtime safety gate.
 
-The committed matrix repeats three fault scenarios across a restart baseline and the recoverable harness:
+The controlled task is a non-idempotent application submit. External `status` and `submit_count` are recorded by an independent SQLite-backed application server and used as ground truth.
 
-- crash after `PREPARED`;
-- crash after `ATTEMPTED`;
-- verifier temporarily unavailable.
+### Final benchmark: 240 controlled trials
 
-Committed report: [experiments/recovery_matrix/results/latest.md](experiments/recovery_matrix/results/latest.md)
+Source:
 
-| Metric | Restart baseline | Recoverable harness |
+```text
+experiments/final_comparison/
+```
+
+Committed result:
+
+[experiments/final_comparison/results/summary.md](experiments/final_comparison/results/summary.md)
+
+Six scenarios are tested, with 20 Native trials and 20 Harness trials per scenario:
+
+- `normal`
+- `before_effect`
+- `after_effect_before_attempted`
+- `after_attempted_before_history`
+- `after_history_commit`
+- `verifier_unavailable`
+
+That gives:
+
+```text
+6 scenarios × 2 modes × 20 repeats = 240 trials
+```
+
+Aggregate result:
+
+| Mode | Trials | Task Completion | Safe Recovery | Duplicate Effect | Unsafe Retry |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Native AgentHistory | 120 | 100.0% | 50.0% | 50.0% | 50.0% |
+| Recoverable Harness | 120 | 100.0% | 100.0% | 0.0% | 0.0% |
+
+The controlled scenarios are equally weighted test cases, **not estimates of production crash probabilities**.
+
+The most important result is not "Native Browser Use fails 50% of the time." The correct conclusion is:
+
+> In the three controlled windows where the external effect can occur before AgentHistory durably captures that fact, Native history-aware resume replays the submit, while the Harness preserves side-effect uncertainty and reconciles before retrying.
+
+In particular:
+
+| Scenario | Native | Harness |
+| --- | --- | --- |
+| after_effect_before_attempted | 20/20 duplicate + unsafe retry | 20/20 safe recovery |
+| after_attempted_before_history | 20/20 duplicate + unsafe retry | 20/20 safe recovery |
+| verifier_unavailable | 20/20 duplicate + unsafe retry | 20/20 blocks uncertainty and recovers safely |
+
+This identifies the reliability boundary precisely:
+
+> **AgentHistory becomes durable at Browser Step finalization; the Harness moves the side-effect durability boundary inside the step, before and immediately after the external effect.**
+
+### Recovery cost
+
+Recovery overhead is a secondary metric because browser startup dominates wall-clock time.
+
+| Mode | Mean recovery time | Mean re-executed actions |
+| --- | ---: | ---: |
+| Native | 4426.6 ms | 2.17 |
+| Harness | 4879.1 ms | 1.67 |
+
+The Harness adds semantic recovery work but avoids some unsafe re-execution.
+
+### Earlier lower-bound experiment
+
+The earlier `experiments/recovery_matrix/` benchmark compares the Harness with a simpler restart-from-task baseline that does not persist durable effect history. It remains useful as a lower bound, but it is **not the primary comparison**.
+
+That earlier result was:
+
+| Metric | Restart-from-task | Recoverable Harness |
 | --- | ---: | ---: |
 | Task Completion Rate | 100.0% | 100.0% |
 | Safe Recovery Rate | 33.3% | 100.0% |
 | Duplicate Effect Rate | 66.7% | 0.0% |
 | Unsafe Retry Rate | 66.7% | 0.0% |
 
-The baseline in this table is deliberately **restart-from-task without durable effect history**. It is not presented as a claim about every Browser Use recovery strategy.
-
-A separate native Browser Use `AgentHistory` baseline is implemented under:
-
-```text
-experiments/native_history_baseline/
-```
-
-to evaluate history/replay independently of the semantic effect-state machinery.
-
-### Process-level crash recovery
-
-The process-recovery experiment uses separate worker processes and hard exits, then reconstructs the workflow from SQLite state.
-
-Committed report: [experiments/process_recovery/results/day10_summary.md](experiments/process_recovery/results/day10_summary.md)
-
-| Scenario | Final unit | Final effect | Verification | External submit count |
-| --- | --- | --- | --- | ---: |
-| after_prepared | completed | committed | verified | 1 |
-| after_attempted | completed | committed | verified | 1 |
-| verifier_unavailable | completed | committed | verified | 1 |
-
-Experiment methodology and metric definitions: [docs/recoverable-runtime/experiments.md](docs/recoverable-runtime/experiments.md)
+Detailed methodology and experiment evolution: [docs/recoverable-runtime/experiments.md](docs/recoverable-runtime/experiments.md)
 
 ---
 
@@ -176,9 +217,10 @@ tests/ci/recovery/               # recovery regression coverage
 
 experiments/
 ├── recovery_smoke/              # controllable local external world
-├── recovery_matrix/             # baseline-vs-harness fault matrix
+├── final_comparison/            # final Native AgentHistory vs Harness benchmark
+├── recovery_matrix/             # early restart lower-bound matrix
 ├── process_recovery/            # hard process crash/restart
-└── native_history_baseline/     # native AgentHistory comparison
+└── native_history_baseline/     # earlier native AgentHistory baseline
 ```
 
 ---
@@ -198,6 +240,7 @@ The current recovery work is primarily concentrated in:
 - `browser_use/recovery/`
 - `tests/ci/recovery/`
 - `experiments/recovery_smoke/`
+- `experiments/final_comparison/`
 - `experiments/recovery_matrix/`
 - `experiments/process_recovery/`
 - `experiments/native_history_baseline/`
@@ -222,7 +265,15 @@ Requirements follow the upstream Browser Use development environment (Python 3.1
 uv run pytest tests/ci/recovery -q
 ```
 
-### Deterministic recovery matrix
+### Final Native AgentHistory vs Harness benchmark
+
+```bash
+uv run python -m experiments.final_comparison.runner
+```
+
+The default is 20 repeats per scenario and mode, producing 240 trials.
+
+### Earlier deterministic recovery matrix
 
 Terminal 1:
 
