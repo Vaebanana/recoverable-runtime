@@ -123,9 +123,10 @@ def _render(status: str, submit_count: int) -> str:
 </head>
 <body>
 	<h1>Application #{APPLICATION_ID}</h1>
-	<p id="status">Status: {status}</p>
+	<p id="status">Application #{APPLICATION_ID} Status: {status}</p>
 	<p id="submit-count">Submit count: {submit_count}</p>
 	<form method="post" action="/submit">
+		<input name="name" aria-label="Application #7 name" />
 		<button type="submit" id="submit-btn">Submit Application</button>
 	</form>
 </body>

@@ -101,6 +101,8 @@ experiments/*
 !experiments/recovery_matrix/
 !experiments/process_recovery/
 !experiments/native_history_baseline/
+!experiments/final_comparison/
 experiments/native_history_baseline/results/
+experiments/final_comparison/results/
 !experiments/process_recovery/results/day10_results.json
 !experiments/process_recovery/results/day10_summary.md
