@@ -2,21 +2,41 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-基于 **Browser Use v0.13.10** 构建的容错执行层，面向包含外部副作用的长链 Web Agent 任务。
+[![CI](https://github.com/Vaebanana/recoverable-runtime/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/Vaebanana/recoverable-runtime/actions/workflows/test.yaml)
 
-这个项目重点解决的不是普通的“Agent 执行失败”，而是一类更危险的恢复问题：
+**基于 Browser Use v0.13.10 的崩溃恢复与副作用安全执行层。** 持久化执行意图，查明结果未知的历史操作，让 Agent 安全继续任务，避免盲目重复提交。
 
-```text
-Agent 可能已经改变了外部世界
-            +
-本地进程在确认结果前发生崩溃
-            =
-盲目重放可能再次执行副作用
-```
+**240 次受控实验 · 6 个场景 · 每个模式、每个场景重复 20 次**
 
-典型情况包括：重复提交申请、重复创建订单、重复发送消息，或者重复修改远端资料。
+| 模式 | 安全恢复率 | 重复副作用率 |
+| --- | ---: | ---: |
+| Native AgentHistory | 50.0% | 50.0% |
+| **Recoverable Harness** | **100.0%** | **0.0%** |
 
-本仓库在 Browser Use 之上增加了一套语义级恢复 Runtime：在执行外部副作用前持久化执行意图，通过 Checkpoint 保存运行状态，通过 Verification 验证真实后置条件，并在结果不确定时通过 Reconciliation 对历史 attempt 进行对账，而不是直接重试。
+两种模式的任务完成率均为 100%；安全恢复还要求外部提交恰好一次，且没有不安全重试。以上为等权脚本场景的实验结果，不代表生产环境故障概率。[查看已提交的正式结果](experiments/final_comparison/results/summary.md)。
+
+[架构设计](docs/recoverable-runtime/architecture.md) · [实验方法](docs/recoverable-runtime/experiments.md) · [复现实验](#复现实验)
+
+## 崩溃窗口：副作用已发生，History 尚未落盘
+
+**提交可能已经改变外部世界，但对应的 Browser Step 还没有写入持久化 AgentHistory。** 本实验两种模式都在 Step finalize 时保存 History；Harness 还在 Step 内部记录执行意图与尝试证据，恢复时先查明未闭合 attempt 的结果，再决定能否重新提交。
+
+![崩溃窗口：Harness 在提交前持久化 PREPARED，提交后持久化 ATTEMPTED；两种模式均在 Step finalize 时持久化 AgentHistory。S5 复用 S3 崩溃点，并使恢复验证暂时不可用。](docs/recoverable-runtime/assets/crash-windows.svg)
+
+图中展示正常提交路径及实际故障注入位置。S0 是无崩溃对照；S5 在 S3 崩溃位置的基础上，增加恢复阶段的验证不可用条件。
+
+| 编号 | 场景 | 崩溃时的状态 / 对照条件 |
+| --- | --- | --- |
+| S0 | `normal` | 不注入崩溃，正常执行与验证。 |
+| S1 | `before_effect` | Harness 的 `PREPARED` 和 Checkpoint 已落盘，尚未执行提交。 |
+| S2 | `after_effect_before_attempted` | 外部 `submit_count = 1`；Harness 仅有 `PREPARED`，持久化 History 尚无 click。 |
+| S3 | `after_attempted_before_history` | 外部 `submit_count = 1`；`ATTEMPTED` 已落盘，持久化 History 仍无 click。 |
+| S4 | `after_history_commit` | 两种模式的持久化 History 都已有 click；Harness 已完成验证并提交副作用结果。 |
+| S5 | `verifier_unavailable` | 初始崩溃点与 S3 相同；首次恢复观察无法得出结论，Harness 保持 `UNKNOWN` 并阻止执行，等待证据恢复。 |
+
+`PREPARED` 只证明执行意图已记录，不能证明副作用已发生或未发生；`ATTEMPTED` 记录执行尝试，也不等于业务成功。最终由 Verification / Reconciliation 确定 `COMMITTED`、`NOT_APPLIED` 或 `UNKNOWN`。
+
+这里的 History 落盘由实验 / Harness 在 `_make_history_item` 后的持久化钩子实现，不能理解成上游 AgentHistory 默认自动提供磁盘持久化。实现见：[故障注入](experiments/final_comparison/worker.py)、[Native History 持久化](experiments/final_comparison/history.py)、[Harness 集成](browser_use/recovery/harness.py)。
 
 ---
 
@@ -72,7 +92,7 @@ PREPARED   <- 外部动作执行前，先持久化执行意图
 执行外部动作
   |
   v
-ATTEMPTED  <- Runtime 已确认跨过外部副作用边界
+ATTEMPTED  <- 执行尝试证据已落盘，业务结果仍需验证
   |
   v
 验证真实后置条件
@@ -141,14 +161,7 @@ experiments/final_comparison/
 
 [experiments/final_comparison/results/summary.md](experiments/final_comparison/results/summary.md)
 
-最终测试 6 个场景，每个场景分别运行 Native ×20、Harness ×20：
-
-- `normal`
-- `before_effect`
-- `after_effect_before_attempted`
-- `after_attempted_before_history`
-- `after_history_commit`
-- `verifier_unavailable`
+最终测试[上文列出的 6 个场景](#崩溃窗口副作用已发生history-尚未落盘)，每个场景分别运行 Native ×20、Harness ×20。
 
 总计：
 
@@ -171,7 +184,7 @@ Aggregate 结果：
 
 而是：
 
-> **在本实验定义的 6 类 crash condition 中，有 3 类场景会出现“外部副作用已经发生，但 AgentHistory 尚未持久化这个事实”的窗口；Native history-aware resume 在这 3 类场景中会再次执行 submit，而 Harness 会保留副作用不确定性并先 Reconciliation。**
+> **在本实验定义的 6 个受控场景中（含无崩溃对照），有 3 类场景会出现“外部副作用已经发生，但 AgentHistory 尚未持久化这个事实”的窗口；Native history-aware resume 在这 3 类场景中会再次执行 submit，而 Harness 会保留副作用不确定性并先 Reconciliation。**
 
 三个关键场景：
 
@@ -183,7 +196,7 @@ Aggregate 结果：
 
 这个实验最准确的结论是：
 
-> **AgentHistory 的可靠边界发生在 Browser Step finalize；Harness 把副作用可靠边界前移到了 Browser Step 内部。**
+> **在两种模式均逐 Step 持久化 History 的前提下，Harness 还在 Step 内部持久化动作前的执行意图和动作后的尝试证据；未闭合的 attempt 必须先对账，再决定能否重试。**
 
 ### Recovery Cost
 

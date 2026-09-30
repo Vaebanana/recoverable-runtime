@@ -2,21 +2,41 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-A fault-tolerant execution layer built on **Browser Use v0.13.10** for side-effectful long-horizon web-agent tasks.
+[![CI](https://github.com/Vaebanana/recoverable-runtime/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/Vaebanana/recoverable-runtime/actions/workflows/test.yaml)
 
-The project focuses on one failure mode that ordinary task restart cannot safely solve:
+**Crash-safe, side-effect-aware recovery for Browser Use v0.13.10.** Persist execution intent, reconcile uncertain effects, and resume without blindly repeating a submit.
 
-```text
-the agent may have already changed the external world
-                    +
-the local process crashes before it knows the outcome
-                    =
-blind replay can duplicate the side effect
-```
+**240 controlled trials · 6 scenarios · 20 repeats per mode and scenario**
 
-Examples include submitting an application twice, creating duplicate orders, sending the same message again, or repeating a profile update.
+| Mode | Safe Recovery | Duplicate Effect |
+| --- | ---: | ---: |
+| Native AgentHistory | 50.0% | 50.0% |
+| **Recoverable Harness** | **100.0%** | **0.0%** |
 
-This repository extends Browser Use with a semantic recovery runtime that persists effect intent, checkpoints runtime state, verifies postconditions, and reconciles uncertain historical attempts before allowing retries.
+Both modes achieved 100% task completion. Safety also requires exactly one external submit and no unsafe retry. These are equally weighted, scripted cases—not production failure probabilities. [Committed results](experiments/final_comparison/results/summary.md).
+
+[Architecture](docs/recoverable-runtime/architecture.md) · [Experiments](docs/recoverable-runtime/experiments.md) · [Reproduce](#reproduce-the-experiments)
+
+## The crash window
+
+**A submit can change the external world before its Browser Step is recorded in durable AgentHistory.** In this benchmark, both modes persist history at step finalization. The Harness additionally records effect intent and attempt evidence inside the step, then reconciles unresolved attempts before allowing another submit.
+
+![Crash windows: Harness persists PREPARED before Submit and ATTEMPTED after it; both modes persist AgentHistory at step finalization. S5 reuses the S3 crash point with unavailable recovery verification.](docs/recoverable-runtime/assets/crash-windows.svg)
+
+The diagram shows the successful submit path and the actual fault-injection positions. S0 is the no-crash control; S5 adds a recovery-time outage to the S3 crash position.
+
+| ID | Scenario | State at the crash / control condition |
+| --- | --- | --- |
+| S0 | `normal` | No crash; execute and verify normally. |
+| S1 | `before_effect` | Harness has durable `PREPARED` + checkpoint; submit has not run. |
+| S2 | `after_effect_before_attempted` | External `submit_count = 1`; Harness still has only `PREPARED`; durable history lacks the click. |
+| S3 | `after_attempted_before_history` | External `submit_count = 1`; `ATTEMPTED` is durable; durable history still lacks the click. |
+| S4 | `after_history_commit` | Both modes have the click in durable history; Harness has already verified and committed the effect. |
+| S5 | `verifier_unavailable` | Same initial crash as S3; first recovery observation is inconclusive. Harness stays `UNKNOWN` and blocks execution until evidence is available. |
+
+`PREPARED` proves intent, not that the effect did or did not happen. `ATTEMPTED` records an execution attempt, not business success. Verification or reconciliation determines `COMMITTED`, `NOT_APPLIED`, or `UNKNOWN`.
+
+History durability here comes from the benchmark/Harness persistence hooks after `_make_history_item`; it is not an automatic disk-persistence guarantee of upstream AgentHistory. See the [fault injection](experiments/final_comparison/worker.py), [Native history persistence](experiments/final_comparison/history.py), and [Harness integration](browser_use/recovery/harness.py).
 
 ---
 
@@ -72,7 +92,7 @@ PREPARED   <- execution intent is durable before the external action
 execute external action
   |
   v
-ATTEMPTED  <- the runtime knows the external boundary was crossed
+ATTEMPTED  <- execution-attempt evidence is durable; outcome still needs verification
   |
   v
 verify postcondition
@@ -122,14 +142,7 @@ Committed result:
 
 [experiments/final_comparison/results/summary.md](experiments/final_comparison/results/summary.md)
 
-Six scenarios are tested, with 20 Native trials and 20 Harness trials per scenario:
-
-- `normal`
-- `before_effect`
-- `after_effect_before_attempted`
-- `after_attempted_before_history`
-- `after_history_commit`
-- `verifier_unavailable`
+The [six scenarios above](#the-crash-window) are tested with 20 Native trials and 20 Harness trials per scenario.
 
 That gives:
 
@@ -160,7 +173,7 @@ In particular:
 
 This identifies the reliability boundary precisely:
 
-> **AgentHistory becomes durable at Browser Step finalization; the Harness moves the side-effect durability boundary inside the step, before and immediately after the external effect.**
+> **With the same per-step history persistence in both modes, the Harness adds durable effect intent before the action and attempt evidence after it, inside the step. Unresolved attempts must be reconciled before retrying.**
 
 ### Recovery cost
 

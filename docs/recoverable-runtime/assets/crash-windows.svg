@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="850" viewBox="0 0 1440 850" role="img" aria-labelledby="title desc">
+  <title id="title">Crash windows inside a Browser Step</title>
+  <desc id="desc">The final comparison persists AgentHistory in both modes at step finalization. Harness additionally persists PREPARED before submit, ATTEMPTED after submit, and a verified outcome before history. S1 follows PREPARED, S2 follows the external effect, S3 follows ATTEMPTED, and S4 follows history persistence. S0 has no crash. S5 uses the S3 crash position, then unavailable recovery verification causes UNKNOWN and blocks execution until reconciliation can verify the effect.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#526079" stroke-width="1.4"/></marker>
+  </defs>
+  <style>
+    text {font-family:Arial,Helvetica,sans-serif; fill:#17243b}
+    .title {font-size:34px;font-weight:700}
+    .sub {font-size:21px;fill:#536279}
+    .label {font-size:23px;font-weight:700}
+    .small {font-size:19px;fill:#536279}
+    .node {font-size:21px;font-weight:700;text-anchor:middle}
+    .hint {font-size:17px;text-anchor:middle;fill:#536279}
+    .scenario {font-size:20px;font-weight:700;text-anchor:middle;fill:#a63c20}
+  </style>
+  <rect width="1440" height="850" rx="20" fill="#ffffff"/>
+  <rect x="1" y="1" width="1438" height="848" rx="20" fill="none" stroke="#d9e1eb" stroke-width="2"/>
+  <text x="40" y="56" class="title">The effect can outlive the step that caused it</text>
+  <text x="40" y="92" class="sub">Controlled submit task · logical event order, not elapsed time · both modes persist native history</text>
+
+  <path d="M220 142H1390" stroke="#526079" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="220" y="131" class="small">Inside the submit step</text>
+  <text x="1193" y="131" class="small">Step finalize</text>
+
+  <rect x="485" y="260" width="731" height="126" rx="12" fill="#fff2e8" stroke="#f0c5aa"/>
+  <text x="851" y="290" text-anchor="middle" font-size="22" font-weight="700" fill="#a63c20">DURABILITY GAP</text>
+  <text x="851" y="326" text-anchor="middle" font-size="21">Effect applied; durable history still has no click</text>
+  <text x="851" y="357" text-anchor="middle" class="small">History-aware resume cannot infer this submit from the saved prefix.</text>
+
+  <text x="40" y="212" class="label">External world</text>
+  <text x="40" y="239" class="small">SQLite ground truth</text>
+  <path d="M222 224H413" stroke="#b1bbc9" stroke-width="3"/>
+  <rect x="399" y="196" width="182" height="56" rx="10" fill="#e9f7ef" stroke="#6ba98a"/>
+  <text x="490" y="230" class="node">Submit applied</text>
+  <path d="M581 224H1387" stroke="#358160" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="884" y="206" width="230" height="34" fill="#ffffff"/>
+  <text x="999" y="230" text-anchor="middle" font-size="22" fill="#236448">submit_count = 1</text>
+
+  <text x="40" y="317" class="label">Native</text>
+  <text x="40" y="345" class="small">AgentHistory</text>
+  <path d="M220 369H1233" stroke="#8995a6" stroke-width="2" stroke-dasharray="7 7"/>
+  <rect x="1234" y="293" width="137" height="87" rx="10" fill="#edf2f9" stroke="#a4b4ca"/>
+  <text x="1302" y="328" class="node">History</text>
+  <text x="1302" y="356" class="hint">click durable</text>
+
+  <rect x="215" y="407" width="1168" height="144" rx="12" fill="#f3f7fc"/>
+  <text x="40" y="463" class="label">Harness</text>
+  <text x="40" y="491" class="small">Effect Ledger</text>
+  <path d="M286 471H1346" stroke="#526079" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="222" y="433" width="136" height="76" rx="10" fill="#e6eefb" stroke="#779ac6"/>
+  <text x="290" y="464" class="node">PREPARED</text>
+  <text x="290" y="490" class="hint">+ checkpoint</text>
+  <rect x="422" y="433" width="136" height="76" rx="10" fill="#ffffff" stroke="#a4b4ca"/>
+  <text x="490" y="464" class="node">Click</text>
+  <text x="490" y="490" class="hint">native action</text>
+  <rect x="629" y="433" width="146" height="76" rx="10" fill="#e6eefb" stroke="#779ac6"/>
+  <text x="702" y="464" class="node">ATTEMPTED</text>
+  <text x="702" y="490" class="hint">ledger append</text>
+  <rect x="861" y="433" width="126" height="76" rx="10" fill="#ffffff" stroke="#a4b4ca"/>
+  <text x="924" y="464" class="node">Verify</text>
+  <text x="924" y="490" class="hint">read-only</text>
+  <rect x="1046" y="433" width="148" height="76" rx="10" fill="#e9f7ef" stroke="#6ba98a"/>
+  <text x="1120" y="464" class="node">COMMITTED</text>
+  <text x="1120" y="490" class="hint">+ checkpoint</text>
+  <rect x="1234" y="433" width="137" height="76" rx="10" fill="#edf2f9" stroke="#a4b4ca"/>
+  <text x="1302" y="464" class="node">History</text>
+  <text x="1302" y="490" class="hint">click durable</text>
+  <text x="808" y="535" text-anchor="middle" class="small">PREPARED = intent · ATTEMPTED = attempt evidence · neither alone proves business success</text>
+
+  <g stroke="#c76643" stroke-width="2" stroke-dasharray="5 5">
+    <path d="M386 167V517"/><path d="M596 167V260M596 386V517"/><path d="M817 167V260M817 386V517"/><path d="M1393 167V517"/>
+  </g>
+  <g>
+    <rect x="364" y="158" width="44" height="31" rx="7" fill="#fff2e8"/><text x="386" y="181" class="scenario">S1</text>
+    <rect x="574" y="158" width="44" height="31" rx="7" fill="#fff2e8"/><text x="596" y="181" class="scenario">S2</text>
+    <rect x="795" y="158" width="44" height="31" rx="7" fill="#fff2e8"/><text x="817" y="181" class="scenario">S3</text>
+    <rect x="1371" y="158" width="44" height="31" rx="7" fill="#fff2e8"/><text x="1393" y="181" class="scenario">S4</text>
+  </g>
+  <text x="40" y="587" class="small">S0 · normal: no crash. The upper path shows successful verification; other outcomes are NOT_APPLIED or UNKNOWN.</text>
+
+  <rect x="32" y="618" width="1376" height="154" rx="14" fill="#fff8ed" stroke="#e6c891"/>
+  <text x="54" y="652" font-size="23" font-weight="700">S5 · verifier_unavailable</text>
+  <text x="371" y="652" font-size="21" fill="#536279">Same crash position as S3; verification unavailable on the first recovery.</text>
+  <text x="54" y="707" font-size="22">Reconcile</text><path d="M162 700H201" stroke="#526079" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="218" y="707" font-size="22">INCONCLUSIVE</text><path d="M404 700H443" stroke="#526079" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="460" y="678" width="252" height="43" rx="8" fill="#fce4d8"/>
+  <text x="586" y="707" text-anchor="middle" font-size="22" font-weight="700">UNKNOWN · blocked</text>
+  <path d="M730 700H768" stroke="#526079" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="786" y="707" font-size="22">Evidence available</text><path d="M984 700H1019" stroke="#526079" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="1036" y="707" font-size="22">Reconcile</text><path d="M1143 700H1178" stroke="#526079" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="1195" y="707" font-size="22" font-weight="700">VERIFIED</text>
+  <text x="54" y="749" font-size="20" fill="#536279">The original attempt becomes COMMITTED. Final submit_count stays 1; no second submit is executed.</text>
+  <text x="40" y="817" font-size="19" fill="#536279">Scope: experiments/final_comparison · History is saved by explicit persistence hooks, not an upstream automatic disk guarantee.</text>
+</svg>
